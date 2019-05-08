@@ -1,0 +1,65 @@
+---
+stages:
+  - test
+  - build
+  - release
+
+image: golang:1.11.5
+
+go:test:
+  stage: test
+  before_script:
+    - cd $GOPATH/src
+    - ln -s $CI_PROJECT_DIR $CI_PROJECT_NAME
+    - cd $CI_PROJECT_NAME
+  script:
+    - go test ./... -coverpkg=./... -coverprofile=cover.out
+    - go tool cover -func=cover.out
+
+go:build:
+  stage: build
+  before_script:
+    - cd $GOPATH/src
+    - ln -s $CI_PROJECT_DIR $CI_PROJECT_NAME
+    - cd $CI_PROJECT_NAME
+  script:
+    - CGO_ENABLED=0 GOOS=linux go build -o dist/backend/$CI_PROJECT_NAME
+    - CGO_ENABLED=0 GOOS=windows go build -o dist/backend/$CI_PROJECT_NAME.exe
+  artifacts:
+    paths:
+      - dist/
+  dependencies:
+    - go:test
+
+docker:release:backend:
+  stage: release
+  services:
+    - docker:dind
+  image: docker:git
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
+  script:
+    - docker build -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
+    - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
+  dependencies:
+    - go:build
+  except:
+    - tags
+
+docker:release:backend:tags:
+  stage: release
+  services:
+    - docker:dind
+  image: docker:git
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
+  script:
+    - docker build -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
+    - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
+    - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
+    - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" "${CI_REGISTRY_IMAGE}:latest"
+    - docker push "${CI_REGISTRY_IMAGE}:latest"
+  dependencies:
+    - go:build
+  only:
+    - tags
