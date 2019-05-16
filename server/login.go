@@ -2,12 +2,12 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"plateau/model"
 	"plateau/server/response"
 	"plateau/server/response/body"
+	"plateau/store"
 
-	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -30,7 +30,7 @@ func (s *loginCredentials) VerifyHash(h []byte) bool {
 
 func (s *Server) loginMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := s.sessionStore.Get(r, ServerName)
+		session, err := s.store.Sessions().Get(r, ServerName)
 		if err != nil {
 			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
@@ -47,7 +47,7 @@ func (s *Server) loginMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) registerUser(w http.ResponseWriter, r *http.Request) {
+func (s *Server) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	var cred loginCredentials
 
 	if json.NewDecoder(r.Body).Decode(&cred) != nil {
@@ -62,25 +62,19 @@ func (s *Server) registerUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resBody := body.New()
-
 	hPassword, err := cred.PasswordHash()
 	if err != nil {
-		response.WriteJSON(w, http.StatusInternalServerError, resBody.Ko(err))
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
 		return
 	}
 
-	if errs := s.db.Create(&model.Player{Name: cred.Username, Password: string(hPassword)}).GetErrors(); len(errs) > 0 {
-		for _, err := range errs {
-			if model.IsDuplicateError(err) {
-				w.WriteHeader(http.StatusConflict)
-
-				return
-			}
+	if err := s.store.Players().Create(store.Player{Name: cred.Username, Password: string(hPassword)}); err != nil {
+		if _, ok := err.(store.DuplicateError); ok {
+			response.WriteJSON(w, http.StatusConflict, body.New().Ko(fmt.Errorf("Player %s already exists", cred.Username)))
+		} else {
+			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 		}
-
-		response.WriteJSON(w, http.StatusInternalServerError, resBody.Ko(errs...))
 
 		return
 	}
@@ -88,7 +82,7 @@ func (s *Server) registerUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (s *Server) loginUser(w http.ResponseWriter, r *http.Request) {
+func (s *Server) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	var cred loginCredentials
 
 	if json.NewDecoder(r.Body).Decode(&cred) != nil {
@@ -103,32 +97,22 @@ func (s *Server) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var (
-		resBody = body.New()
-
-		player model.Player
-	)
-
-	if errs := s.db.Where("name = ?", cred.Username).Find(&player).GetErrors(); len(errs) > 0 {
+	player, err := s.store.Players().Read(cred.Username)
+	if err != nil {
 		httpCode := http.StatusInternalServerError
-
-		for _, err := range errs {
-			if gorm.IsRecordNotFoundError(err) {
-				httpCode = http.StatusUnauthorized
-
-				break
-			}
+		if _, ok := err.(store.DontExistError); ok {
+			httpCode = http.StatusUnauthorized
 		}
 
-		response.WriteJSON(w, httpCode, body.New().Ko(errs...))
+		w.WriteHeader(httpCode)
 
 		return
 	}
 
 	if cred.VerifyHash([]byte(player.Password)) {
-		session, err := s.sessionStore.Get(r, ServerName)
+		session, err := s.store.Sessions().Get(r, ServerName)
 		if err != nil {
-			response.WriteJSON(w, http.StatusInternalServerError, resBody.Ko(err))
+			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
 			return
 		}
@@ -137,7 +121,7 @@ func (s *Server) loginUser(w http.ResponseWriter, r *http.Request) {
 		session.Values["authenticated"] = true
 
 		if err := session.Save(r, w); err != nil {
-			response.WriteJSON(w, http.StatusInternalServerError, resBody.Ko(err))
+			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
 			return
 		}
@@ -148,15 +132,10 @@ func (s *Server) loginUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) logoutUser(w http.ResponseWriter, r *http.Request) {
-	var (
-		resBody = body.New()
-
-		session, err = s.sessionStore.Get(r, ServerName)
-	)
-
+func (s *Server) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := s.store.Sessions().Get(r, ServerName)
 	if err != nil {
-		response.WriteJSON(w, http.StatusInternalServerError, resBody.Ko(err))
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
 		return
 	}
@@ -164,7 +143,7 @@ func (s *Server) logoutUser(w http.ResponseWriter, r *http.Request) {
 	session.Values["authenticated"] = false
 
 	if err := session.Save(r, w); err != nil {
-		response.WriteJSON(w, http.StatusInternalServerError, resBody.Ko(err))
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
 		return
 	}

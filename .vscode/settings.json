@@ -1,0 +1,3 @@
+{
+    "go.buildTags": "game_rockpaperscissors run_rethinkdb"
+}

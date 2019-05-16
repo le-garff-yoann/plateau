@@ -1,20 +1,19 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
-	"plateau/model"
 	"plateau/server/response"
 	"plateau/server/response/body"
+	"plateau/store"
 
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
 )
 
-func (s *Server) getPlayersName(w http.ResponseWriter, r *http.Request) {
-	var names []string
-
-	if errs := s.db.Order("name").Select("name").Find(&[]model.Player{}).Pluck("name", &names).GetErrors(); len(errs) > 0 {
-		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(errs...))
+func (s *Server) getPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
+	names, err := s.store.Players().List()
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
 		return
 	}
@@ -22,61 +21,19 @@ func (s *Server) getPlayersName(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, http.StatusOK, names)
 }
 
-func (s *Server) readPlayer(w http.ResponseWriter, r *http.Request) {
-	var (
-		v = mux.Vars(r)
+func (s *Server) readPlayerHandler(w http.ResponseWriter, r *http.Request) {
+	v := mux.Vars(r)
 
-		player model.Player
-	)
-
-	if errs := s.db.Where("name = ?", v["name"]).First(&player).GetErrors(); len(errs) > 0 {
-		httpCode := http.StatusInternalServerError
-
-		for _, err := range errs {
-			if gorm.IsRecordNotFoundError(err) {
-				httpCode = http.StatusNotFound
-
-				break
-			}
+	player, err := s.store.Players().Read(v["name"])
+	if err != nil {
+		if _, ok := err.(store.DontExistError); ok {
+			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf("Player %s not found", v["name"])))
+		} else {
+			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 		}
-
-		response.WriteJSON(w, httpCode, body.New().Ko(errs...))
 
 		return
 	}
 
 	response.WriteJSON(w, http.StatusOK, player)
-}
-
-func (s *Server) getPlayerGamesID(w http.ResponseWriter, r *http.Request) {
-	var (
-		v = mux.Vars(r)
-
-		player model.Player
-	)
-
-	if errs := s.db.Preload("Games", func(db *gorm.DB) *gorm.DB {
-		return db.Order("id")
-	}).Where("name = ?", v["name"]).First(&player).GetErrors(); len(errs) > 0 {
-		httpCode := http.StatusInternalServerError
-
-		for _, err := range errs {
-			if gorm.IsRecordNotFoundError(err) {
-				httpCode = http.StatusNotFound
-
-				break
-			}
-		}
-
-		response.WriteJSON(w, httpCode, body.New().Ko(errs...))
-
-		return
-	}
-
-	var gamesID []uint
-	for _, g := range player.Games {
-		gamesID = append(gamesID, g.ID)
-	}
-
-	response.WriteJSON(w, http.StatusOK, gamesID)
 }

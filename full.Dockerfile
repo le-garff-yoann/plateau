@@ -14,7 +14,9 @@ ENTRYPOINT [ "/plateau" ]
 
 CMD [ \
     "--listen", "${PLATEAU_LISTENER}", \
-    "--listen-session-key", "${PLATEAU_LISTENER_SESSION_KEY}", \
     "--listen-static-dir", "/public/", \
-    "--pg-conn-str", "${PLATEAU_PG_CONNECTION_STRING}", \
+    "--session-key", "${PLATEAU_SESSION_KEY}", \
+    "--rethinkdb-address", "${PLATEAU_RETHINKDB_ADDRESS}", \
+    "--rethinkdb-database", "${PLATEAU_RETHINKDB_DATABASE}", \
+    "--rethinkdb-create-tables", \
 ]

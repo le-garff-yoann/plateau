@@ -9,7 +9,7 @@
 
 ## Development mode
 
-1. Run plateau with the `--listen :3000` parameter.
+1. Run `plateau run` with the `--listen :3000` parameter.
 2.
 ```bash
 NODE_DEV_PROXY_API=localhost:3000 \

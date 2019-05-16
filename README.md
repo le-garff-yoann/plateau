@@ -10,21 +10,30 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/le-garff-yoann/plateau)](https://goreportcard.com/report/github.com/le-garff-yoann/plateau)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **The code in this repository will build the binary for the [Rock–paper–scissors](https://en.wikipedia.org/wiki/Rock%E2%80%93paper%E2%80%93scissors)** game.
-Please read [these instructions](CUSTOMIZING.md) is you want to "customize and build" for another game.
+> Build your own board game server. Batteries included!
 
-## Run
+## Let's go
+
+**The code in this repository will build the binary for the [Rock–paper–scissors](https://en.wikipedia.org/wiki/Rock%E2%80%93paper%E2%80%93scissors) game.**
 
 ```bash
-# plateau help # Print the global help.
-# plateau help run # Print the help for the run subcommand.
+go build -tags="game_rockpaperscissors run_rethinkdb" -o plateau # And build to use RethinkDB as the store.
+
+# ./plateau help # Print the global help.
+# ./plateau help run # Print the help for the run subcommand.
 
 # Start the server.
-plateau run \
+./plateau run \
     --listen :3000 \
-    --listen-session-key my-STRONG-secret \
-    --pg-conn-str postgres://pg:pg@localhost/pg
+    --session-key my-STRONG-secret \
+    --rethinkdb-address rethinkdb:28015 \
+    --rethinkdb-database plateau \
+    --rethinkdb-create-tables
 ```
+
+**N.B.** Please read [these instructions](CUSTOMIZING.md) is you want to "customize and build" for another game.
+
+**N.B.** Parameters to the `run` subcommand may vary function of the flags declared by `store.RunCommandSetter(*cobra.Command)` (and thus by the implementation of `store.Store`).
 
 ## API
 
@@ -51,17 +60,17 @@ curl $BASE/user/login --cookie-jar cookies.out \
 # Returns players.
 curl -b cookies.out $BASE/api/players
 
-# Create and returns a game.
-game=$(
-curl -b cookies.out -X POST $BASE/api/games \
+# Create and returns a match.
+match=$(
+curl -b cookies.out -X POST $BASE/api/matchs \
     -d '{"number_of_players_required":2}'
 )
 
-# Connect to the game throught WebSocket.
+# Connect to the match throught WebSocket.
 wscat \
     -H X-Interactive:true \
     -H Cookie:$COOKIE_NAME=$(grep $COOKIE_NAME cookies.out | awk '{print $7}') \
-    -c $BASE/api/games/$(echo $game | jq .id)
+    -c $BASE/api/matchs/$(echo $match | jq -r .id)
 ```
 
 ## Frontend

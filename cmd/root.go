@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"plateau/server"
+	"plateau/store"
 
 	"github.com/spf13/cobra"
 )
@@ -13,8 +14,8 @@ const AppName = server.ServerName
 
 // RootCmd is meant to reused across cmd/*/*.go
 var (
-	dbURL, serverListener, serverListenerSessionKey, serverListenerStaticDir string
-	pgDebugging, pgAutoMigrate                                               bool
+	serverListener, serverListenerStaticDir string
+	str                                     store.Store
 
 	rootCmd = &cobra.Command{
 		Use: AppName,

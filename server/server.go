@@ -1,16 +1,14 @@
 package server
 
 import (
-	"fmt"
-	"log"
 	"net/http"
-	"os"
-	"plateau/model"
+	"plateau/store"
+	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	"github.com/jinzhu/gorm"
-	"github.com/wader/gormstore"
+	uuid "github.com/satori/go.uuid"
 )
 
 // ServerName is the server name.
@@ -20,38 +18,76 @@ var wsUpgrader = websocket.Upgrader{}
 
 // Server ...
 type Server struct {
-	db *gorm.DB
-	// store        *store.Store
-	sessionStore *gormstore.Store
+	store store.Store
 
-	HTTPServer *http.Server
+	ecBroadcastersMux sync.Mutex
+	ecBroadcasters    map[string]*store.EventContainerBroadcaster
+
+	httpServer *http.Server
+
+	done chan int
+}
+
+func (s *Server) recvEventContainerBroadcaster(matchID string) (<-chan store.EventContainer, *uuid.UUID, error) {
+	if _, ok := s.ecBroadcasters[matchID]; !ok {
+		s.ecBroadcastersMux.Lock()
+		defer s.ecBroadcastersMux.Unlock()
+
+		var err error
+		s.ecBroadcasters[matchID], err = s.store.Matchs().CreateEventContainerBroadcaster(matchID)
+		if err != nil {
+			delete(s.ecBroadcasters, matchID)
+
+			return nil, nil, err
+		}
+
+		go func() {
+			s.ecBroadcasters[matchID].Run()
+		}()
+
+		recv, uuid := s.ecBroadcasters[matchID].Recv()
+
+		return recv, &uuid, nil
+	}
+
+	return nil, nil, nil
+}
+
+func (s *Server) removeRecvEventContainerBroadcaster(matchID string, uuid uuid.UUID) {
+	s.ecBroadcastersMux.Lock()
+
+	s.ecBroadcasters[matchID].RemoveRecv(uuid)
+
+	s.ecBroadcastersMux.Unlock()
+}
+
+func (s *Server) cleanupBroadcasters() {
+	s.ecBroadcastersMux.Lock()
+
+	for matchID, br := range s.ecBroadcasters {
+		if br.CountReceivers() == 0 {
+			br.Done <- 0
+
+			delete(s.ecBroadcasters, matchID)
+		}
+	}
+
+	s.ecBroadcastersMux.Unlock()
 }
 
 // New ...
-func New(pgURL, listener, listenerSessionKey, listenerStaticDir string, pgAutoMigrate, pgDebugging bool) (*Server, error) {
-	db, err := gorm.Open("postgres", pgURL)
-	if err != nil {
+func New(listener, listenerStaticDir string, str store.Store) (*Server, error) {
+	if err := str.Open(); err != nil {
 		return nil, err
-	}
-
-	db.LogMode(pgDebugging)
-	if pgDebugging {
-		db.SetLogger(log.New(os.Stdout, "\r\n", 0))
-	}
-
-	if pgAutoMigrate {
-		if errs := model.AutoMigrate(db).GetErrors(); len(errs) > 0 {
-			return nil, fmt.Errorf("%s", errs)
-		}
 	}
 
 	r := mux.NewRouter().StrictSlash(true)
 	ar := r.PathPrefix("/api").Subrouter()
 
 	s := &Server{
-		db:           db,
-		sessionStore: gormstore.New(db, []byte(listenerSessionKey)),
-		HTTPServer: &http.Server{
+		store:          str,
+		ecBroadcasters: make(map[string]*store.EventContainerBroadcaster),
+		httpServer: &http.Server{
 			Addr:    listener,
 			Handler: r,
 		},
@@ -59,65 +95,60 @@ func New(pgURL, listener, listenerSessionKey, listenerStaticDir string, pgAutoMi
 
 	ar.Use(s.loginMiddleware)
 	ar.
-		PathPrefix("/players/{name}/games").
-		Methods("GET").
-		HandlerFunc(s.getPlayerGamesID).
-		Name("getPlayerGamesID")
-	ar.
 		PathPrefix("/players/{name}").
 		Methods("GET").
-		HandlerFunc(s.readPlayer).
+		HandlerFunc(s.readPlayerHandler).
 		Name("readPlayer")
 	ar.
 		PathPrefix("/players").
 		Methods("GET").
-		HandlerFunc(s.getPlayersName).
+		HandlerFunc(s.getPlayersNameHandler).
 		Name("getPlayersName")
 	ar.
-		PathPrefix("/games/{id}/players").
-		HandlerFunc(s.getGamePlayersName).
-		Name("getGamePlayersName")
+		PathPrefix("/matchs/{id}/players").
+		HandlerFunc(s.getMatchPlayersNameHandler).
+		Name("getMatchPlayersName")
 	ar.
-		PathPrefix("/games/{id}/event-containers").
-		HandlerFunc(s.getGameEventContainers).
-		Name("getGameEventContainers")
+		PathPrefix("/matchs/{id}/event-containers").
+		HandlerFunc(s.getMatchEventContainersHandler).
+		Name("getMatchEventContainers")
 	ar.
-		PathPrefix("/games/{id}").
+		PathPrefix("/matchs/{id}").
 		Headers("X-Interactive", "true").
-		HandlerFunc(s.connectGame).
-		Name("connectGame")
+		HandlerFunc(s.connectMatchHandler).
+		Name("connectMatch")
 	ar.
-		PathPrefix("/games/{id}").
+		PathPrefix("/matchs/{id}").
 		Methods("GET").
-		HandlerFunc(s.readGame).
-		Name("readGame")
+		HandlerFunc(s.readMatchHandler).
+		Name("readMatch")
 	ar.
-		PathPrefix("/games").
+		PathPrefix("/matchs").
 		Methods("GET").
-		HandlerFunc(s.getGameIDs).
-		Name("getGameIDs")
+		HandlerFunc(s.getMatchIDsHandler).
+		Name("getMatchIDs")
 	ar.
-		PathPrefix("/games").
+		PathPrefix("/matchs").
 		Methods("POST").
-		HandlerFunc(s.createGame).
-		Name("createGame")
+		HandlerFunc(s.createMatchHandler).
+		Name("createMatch")
 
 	r.
 		PathPrefix("/user/register").
 		Methods("POST").
-		HandlerFunc(s.registerUser).
+		HandlerFunc(s.registerUserHandler).
 		Name("registerUser")
 	r.
 		PathPrefix("/user/login").
 		Methods("POST").
-		HandlerFunc(s.loginUser).
+		HandlerFunc(s.loginUserHandler).
 		Name("loginUser")
 	r.
 		PathPrefix("/user/logout").
 		Methods("DEL").
-		HandlerFunc(s.logoutUser).
+		HandlerFunc(s.logoutUserHandler).
 		Name("logoutUser")
-	// TODO: Add an endpoint from which we can get the game name and it's default settings.
+	// TODO: Add an endpoint from which we can get the game implementation name and it's default settings.
 
 	if listenerStaticDir != "" {
 		r.
@@ -132,10 +163,27 @@ func New(pgURL, listener, listenerSessionKey, listenerStaticDir string, pgAutoMi
 
 // Start ...
 func (s *Server) Start() error {
-	return s.HTTPServer.ListenAndServe()
+	tk := time.NewTicker(time.Second * 5)
+
+	go func() {
+		for {
+			select {
+			case <-tk.C:
+				s.cleanupBroadcasters()
+			case <-s.done:
+				tk.Stop()
+
+				return
+			}
+		}
+	}()
+
+	return s.httpServer.ListenAndServe()
 }
 
 // Stop ...
 func (s *Server) Stop() error {
-	return s.db.Close()
+	s.done <- 0
+
+	return s.store.Close()
 }
