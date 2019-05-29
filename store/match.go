@@ -1,41 +1,53 @@
 package store
 
 import (
+	"plateau/protocol"
 	"time"
 )
 
-// Match ...
-type Match struct {
-	ID string `json:"id"`
+// MatchGameStore ...
+type MatchGameStore interface {
+	List() (ids []string, err error)
+	Read(id string) (*protocol.Match, error)
 
-	CreatedAt *time.Time `json:"created_at"`
-	EndedAt   *time.Time `json:"ended_at"`
+	EndedAt(id string, val time.Time) error
 
-	NumberOfPlayersRequired uint      `json:"number_of_players_required"`
-	Players                 []*Player `json:"-"`
-
-	Running bool `json:"running"`
-
-	EventContainers []*EventContainer `json:"-"`
-}
-
-func (s *Match) String() string {
-	return s.ID
+	CreateTransaction(id string, transaction protocol.Transaction) error
+	UpdateCurrentTransactionHolder(id, newHolderName string) error
+	AddMessageToCurrentTransaction(id string, message protocol.Message) error
 }
 
 // MatchStore ...
 type MatchStore interface {
-	List() (IDs []string, err error)
-	Create(Match) (id string, err error)
-	Read(matchID string) (*Match, error)
+	MatchGameStore
 
-	EndedAt(matchID string, value *time.Time) error
+	Create(protocol.Match) (id string, err error)
 
-	AddPlayer(matchID string, playerName string) error
-	RemovePlayer(matchID string, playerName string) error
+	ConnectPlayer(id, playerName string) error
+	DisconnectPlayer(id, playerName string) error
+	PlayerJoins(id, playerName string) error
+	PlayerLeaves(id, playerName string) error
 
-	Running(matchID string, value bool) error
+	CreateTransactionsChangeIterator(id string) (TransactionChangeIterator, error)
+}
 
-	CreateEventContainer(matchID string, ec EventContainer) error
-	CreateEventContainerBroadcaster(matchID string) (*EventContainerBroadcaster, error)
+// TransactionChange ...
+type TransactionChange struct {
+	Old *protocol.Transaction
+	New *protocol.Transaction
+}
+
+// NewMessages ...
+func (s *TransactionChange) NewMessages() (msgs []*protocol.Message) {
+	for i := len(s.Old.Messages); i < len(s.New.Messages); i++ {
+		msgs = append(msgs, &s.New.Messages[i])
+	}
+
+	return msgs
+}
+
+// TransactionChangeIterator ...
+type TransactionChangeIterator interface {
+	Next(*TransactionChange) bool
+	Close() error
 }

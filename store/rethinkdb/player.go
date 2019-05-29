@@ -1,15 +1,14 @@
 package rethinkdb
 
 import (
+	"plateau/protocol"
 	"plateau/store"
 
 	rethinkdb "gopkg.in/rethinkdb/rethinkdb-go.v5"
 )
 
-// Player ...
-type Player struct {
-	Name string `rethinkdb:"id"`
-
+type player struct {
+	Name     string `rethinkdb:"id"`
 	Password string `rethinkdb:"password"`
 
 	Wins  uint `rethinkdb:"wins"`
@@ -17,15 +16,15 @@ type Player struct {
 	Ties  uint `rethinkdb:"ties"`
 }
 
-func playerFromStoreStruct(p store.Player) *Player {
-	return &Player{
+func playerFromProtocolStruct(p *protocol.Player) *player {
+	return &player{
 		p.Name, p.Password,
 		p.Wins, p.Loses, p.Ties,
 	}
 }
 
-func (s *Player) toStoreStruct() *store.Player {
-	return &store.Player{
+func (s *player) toProtocolStruct() *protocol.Player {
+	return &protocol.Player{
 		Name:     s.Name,
 		Password: s.Password,
 		Wins:     s.Wins,
@@ -34,16 +33,16 @@ func (s *Player) toStoreStruct() *store.Player {
 	}
 }
 
-// PlayerStore ...
-type PlayerStore struct {
+// playerStore ...
+type playerStore struct {
 	queryExecuter rethinkdb.QueryExecutor
 }
 
-func (s *PlayerStore) tableName() string {
+func (s *playerStore) tableName() string {
 	return "players"
 }
 
-func (s *PlayerStore) listTerm() rethinkdb.Term {
+func (s *playerStore) listTerm() rethinkdb.Term {
 	return rethinkdb.
 		Table(s.tableName()).
 		Map(func(p rethinkdb.Term) interface{} {
@@ -51,19 +50,28 @@ func (s *PlayerStore) listTerm() rethinkdb.Term {
 		})
 }
 
-func (s *PlayerStore) createTerm(p store.Player) rethinkdb.Term {
+func (s *playerStore) createTerm(p *protocol.Player) rethinkdb.Term {
 	return rethinkdb.
 		Table(s.tableName()).
-		Insert(playerFromStoreStruct(p))
+		Insert(playerFromProtocolStruct(p))
 }
 
-func (s *PlayerStore) readTerm(name string) rethinkdb.Term {
+func (s *playerStore) readTerm(name string) rethinkdb.Term {
 	return rethinkdb.
 		Table(s.tableName()).
 		GetAll(name)
 }
 
-func (s *PlayerStore) increaseScoreTerm(field string, name string, val uint) rethinkdb.Term {
+func (s *playerStore) connectedTerm(name string, val bool) rethinkdb.Term {
+	return rethinkdb.
+		Table(s.tableName()).
+		GetAll(name).
+		Update(map[string]interface{}{
+			"connected": val,
+		})
+}
+
+func (s *playerStore) increaseScoreTerm(field, name string, increase uint) rethinkdb.Term {
 	return rethinkdb.
 		Table(s.tableName()).
 		GetAll(name).
@@ -71,13 +79,13 @@ func (s *PlayerStore) increaseScoreTerm(field string, name string, val uint) ret
 			return map[string]interface{}{
 				field: p.
 					Field(field).
-					Add(val),
+					Add(increase),
 			}
 		})
 }
 
-// List ...
-func (s *PlayerStore) List() ([]string, error) {
+// List implements `store.playerStore` interface.
+func (s *playerStore) List() ([]string, error) {
 	cursor, err := s.listTerm().Run(s.queryExecuter)
 	if err != nil {
 		return nil, err
@@ -90,9 +98,9 @@ func (s *PlayerStore) List() ([]string, error) {
 	return names, err
 }
 
-// Create ...
-func (s *PlayerStore) Create(p store.Player) error {
-	_, err := s.createTerm(p).RunWrite(s.queryExecuter)
+// Create implements `store.playerStore` interface.
+func (s *playerStore) Create(p protocol.Player) error {
+	_, err := s.createTerm(&p).RunWrite(s.queryExecuter)
 	if rethinkdb.IsConflictErr(err) {
 		return store.DuplicateError(err.Error())
 	}
@@ -100,15 +108,15 @@ func (s *PlayerStore) Create(p store.Player) error {
 	return err
 }
 
-// Read ...
-func (s *PlayerStore) Read(name string) (*store.Player, error) {
+// Read implements `store.playerStore` interface.
+func (s *playerStore) Read(name string) (*protocol.Player, error) {
 	cursor, err := s.readTerm(name).Run(s.queryExecuter)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close()
 
-	var player Player
+	var player player
 
 	err = cursor.One(&player)
 	if err != nil {
@@ -119,12 +127,12 @@ func (s *PlayerStore) Read(name string) (*store.Player, error) {
 		return nil, err
 	}
 
-	return player.toStoreStruct(), nil
+	return player.toProtocolStruct(), nil
 }
 
-// IncreaseWins ...
-func (s *PlayerStore) IncreaseWins(name string, val uint) error {
-	_, err := s.increaseScoreTerm("wins", name, val).RunWrite(s.queryExecuter)
+// IncreaseWins implements `store.playerStore` interface.
+func (s *playerStore) IncreaseWins(name string, increase uint) error {
+	_, err := s.increaseScoreTerm("wins", name, increase).RunWrite(s.queryExecuter)
 	if err == rethinkdb.ErrEmptyResult {
 		return store.DontExistError(err.Error())
 	}
@@ -132,9 +140,9 @@ func (s *PlayerStore) IncreaseWins(name string, val uint) error {
 	return err
 }
 
-// IncreaseLoses ...
-func (s *PlayerStore) IncreaseLoses(name string, val uint) error {
-	_, err := s.increaseScoreTerm("loses", name, val).RunWrite(s.queryExecuter)
+// IncreaseLoses implements `store.playerStore` interface.
+func (s *playerStore) IncreaseLoses(name string, increase uint) error {
+	_, err := s.increaseScoreTerm("loses", name, increase).RunWrite(s.queryExecuter)
 	if err == rethinkdb.ErrEmptyResult {
 		return store.DontExistError(err.Error())
 	}
@@ -142,9 +150,9 @@ func (s *PlayerStore) IncreaseLoses(name string, val uint) error {
 	return err
 }
 
-// IncreaseTies ...
-func (s *PlayerStore) IncreaseTies(name string, val uint) error {
-	_, err := s.increaseScoreTerm("ties", name, val).RunWrite(s.queryExecuter)
+// IncreaseTies implements `store.playerStore` interface.
+func (s *playerStore) IncreaseTies(name string, increase uint) error {
+	_, err := s.increaseScoreTerm("ties", name, increase).RunWrite(s.queryExecuter)
 	if err == rethinkdb.ErrEmptyResult {
 		return store.DontExistError(err.Error())
 	}

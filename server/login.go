@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"plateau/protocol"
 	"plateau/server/response"
 	"plateau/server/response/body"
 	"plateau/store"
@@ -69,9 +70,9 @@ func (s *Server) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.store.Players().Create(store.Player{Name: cred.Username, Password: string(hPassword)}); err != nil {
+	if err := s.store.Players().Create(protocol.Player{Name: cred.Username, Password: string(hPassword)}); err != nil {
 		if _, ok := err.(store.DuplicateError); ok {
-			response.WriteJSON(w, http.StatusConflict, body.New().Ko(fmt.Errorf("Player %s already exists", cred.Username)))
+			response.WriteJSON(w, http.StatusConflict, body.New().Ko(fmt.Errorf(`Player "%s" already exists`, cred.Username)))
 		} else {
 			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 		}

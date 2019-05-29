@@ -1,19 +1,18 @@
 package rockpaperscissors
 
 import (
-	"errors"
 	"fmt"
-	"plateau/event"
-	"plateau/store"
+	"plateau/protocol"
+	"plateau/server"
 )
 
 // Game ...
 type Game struct {
-	name                   string
+	name, description      string
 	minPlayers, maxPlayers uint
 }
 
-// Init ...
+// Init implements `server.Game` interface.
 func (s *Game) Init() error {
 	s.name = "rock–paper–scissors"
 
@@ -23,40 +22,36 @@ func (s *Game) Init() error {
 	return nil
 }
 
-// Name implements `game.Game` interface.
+// Name implements `server.Game` interface.
 func (s *Game) Name() string {
 	return s.name
 }
 
-// IsMatchValid ...
-func (s *Game) IsMatchValid(g *store.Match) error {
+// Description implements `server.Game` interface.
+func (s *Game) Description() string {
+	return s.description
+}
+
+// IsMatchValid implements `server.Game` interface.
+func (s *Game) IsMatchValid(g *protocol.Match) error {
 	if !(g.NumberOfPlayersRequired >= s.MinPlayers() && g.NumberOfPlayersRequired <= s.MaxPlayers()) {
-		return fmt.Errorf("the number of players must be between %d and %d", s.MinPlayers(), s.MaxPlayers())
+		return fmt.Errorf("The number of players must be between %d and %d", s.MinPlayers(), s.MaxPlayers())
 	}
 
 	return nil
 }
 
-// MinPlayers implements `game.Game` interface.
+// MinPlayers implements `server.Game` interface.
 func (s *Game) MinPlayers() uint {
 	return s.minPlayers
 }
 
-// MaxPlayers implements `game.Game` interface.
+// MaxPlayers implements `server.Game` interface.
 func (s *Game) MaxPlayers() uint {
 	return s.maxPlayers
 }
 
-// OnEvent implements `game.Game` interface.
-func (s *Game) OnEvent(m *store.Match, ec *store.EventContainer) error {
-	switch ec.Event {
-	case event.EPlayerWantToJoin:
-		if uint(len(m.Players)) >= s.MaxPlayers() {
-			return errors.New("There are too many players in that game")
-		}
-	case event.EPlayerWantToSurrender:
-		return errors.New("You cannont concede on this game")
-	}
-
-	return nil
+// Context implements `server.Game` interface.
+func (s *Game) Context(matchRuntime *server.MatchRuntime, requestContainer *protocol.RequestContainer) *server.Context {
+	return server.NewContext()
 }

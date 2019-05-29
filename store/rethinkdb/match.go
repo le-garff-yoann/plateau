@@ -1,137 +1,129 @@
 package rethinkdb
 
 import (
+	"fmt"
+	"plateau/protocol"
 	"plateau/store"
+	"reflect"
+	"sync"
 	"time"
 
 	rethinkdb "gopkg.in/rethinkdb/rethinkdb-go.v5"
 )
 
-// Match ...
-type Match struct {
+type match struct {
 	ID string `rethinkdb:"id,omitempty"`
 
-	CreatedAt time.Time `rethinkdb:"created_at"`
-	EndedAt   time.Time `rethinkdb:"ended_at"`
+	CreatedAt time.Time  `rethinkdb:"created_at"`
+	EndedAt   *time.Time `rethinkdb:"ended_at"`
+
+	ConnectedPlayers []player `rethinkdb:"connected_player_ids,reference" rethinkdb_ref:"id"`
 
 	NumberOfPlayersRequired uint     `rethinkdb:"number_of_players_required"`
-	Players                 []Player `rethinkdb:"player_ids,reference" rethinkdb_ref:"id"`
+	Players                 []player `rethinkdb:"player_ids,reference" rethinkdb_ref:"id"`
 
-	Running bool `rethinkdb:"running"`
-
-	EventContainers []EventContainer `rethinkdb:"event_containers"`
+	Transactions []transaction `rethinkdb:"transactions"`
 }
 
-func matchFromStoreStruct(m store.Match) *Match {
+func matchFromProtocolStruct(m *protocol.Match) *match {
 	var (
-		players []Player
+		connectedPlayers, players []player
 
-		createdAt, endedAt time.Time
-
-		eventContainers []EventContainer
+		transactions []transaction
 	)
 
-	if m.CreatedAt != nil {
-		createdAt = *m.CreatedAt
-	}
-
-	if m.EndedAt != nil {
-		endedAt = *m.EndedAt
+	for _, p := range m.ConnectedPlayers {
+		players = append(connectedPlayers, *playerFromProtocolStruct(&p))
 	}
 
 	for _, p := range m.Players {
-		players = append(players, *playerFromStoreStruct(*p))
+		players = append(players, *playerFromProtocolStruct(&p))
 	}
 
-	for _, ec := range m.EventContainers {
-		eventContainers = append(eventContainers, *eventContainerFromStoreStruct(*ec))
+	for _, trx := range m.Transactions {
+		transactions = append(transactions, *transactionFromProtocolStruct(&trx))
 	}
 
-	return &Match{
+	return &match{
 		ID:                      m.ID,
-		CreatedAt:               createdAt,
-		EndedAt:                 endedAt,
+		CreatedAt:               m.CreatedAt,
+		EndedAt:                 m.EndedAt,
+		ConnectedPlayers:        connectedPlayers,
 		NumberOfPlayersRequired: m.NumberOfPlayersRequired,
 		Players:                 players,
-		Running:                 m.Running,
-		EventContainers:         eventContainers,
+		Transactions:            transactions,
 	}
 }
 
-func (s *Match) toStoreStruct() *store.Match {
+func (s *match) toProtocolStruct() *protocol.Match {
 	var (
-		players []*store.Player
+		connectedPlayers, players []protocol.Player
 
-		eventContainers []*store.EventContainer
+		transactions []protocol.Transaction
 	)
 
+	for _, p := range s.ConnectedPlayers {
+		players = append(connectedPlayers, *p.toProtocolStruct())
+	}
+
 	for _, p := range s.Players {
-		players = append(players, p.toStoreStruct())
+		players = append(players, *p.toProtocolStruct())
 	}
 
-	for _, ec := range s.EventContainers {
-		eventContainers = append(eventContainers, ec.toStoreStruct())
+	for _, trx := range s.Transactions {
+		transactions = append(transactions, *trx.toProtocolStruct())
 	}
 
-	return &store.Match{
+	return &protocol.Match{
 		ID:                      s.ID,
-		CreatedAt:               &s.CreatedAt,
-		EndedAt:                 &s.EndedAt,
+		CreatedAt:               s.CreatedAt,
+		EndedAt:                 s.EndedAt,
+		ConnectedPlayers:        connectedPlayers,
 		NumberOfPlayersRequired: s.NumberOfPlayersRequired,
 		Players:                 players,
-		Running:                 s.Running,
-		EventContainers:         eventContainers,
+		Transactions:            transactions,
 	}
 }
 
-// MatchStore ...
-type MatchStore struct {
+// matchStore ...
+type matchStore struct {
 	queryExecuter rethinkdb.QueryExecutor
 }
 
-func (s *MatchStore) tableName() string {
+func (s *matchStore) tableName() string {
 	return "matchs"
 }
 
-type matchChangeResponse struct {
-	NewValue Match `rethinkdb:"new_val"`
-	OldValue Match `rethinkdb:"old_val"`
-}
-
-func (s *MatchStore) mergePredicateFunc() func(p rethinkdb.Term) interface{} {
-	var playerStore PlayerStore
+func (s *matchStore) mergePredicateFunc() func(p rethinkdb.Term) interface{} {
+	var playerStore playerStore
 
 	return func(p rethinkdb.Term) interface{} {
 		return map[string]interface{}{
+			"connected_player_ids": rethinkdb.
+				Table(playerStore.tableName()).
+				GetAll(rethinkdb.Args(p.Field("connected_player_ids"))).
+				CoerceTo("array"),
 			"player_ids": rethinkdb.
 				Table(playerStore.tableName()).
 				GetAll(rethinkdb.Args(p.Field("player_ids"))).
 				CoerceTo("array"),
-			"event_containers": p.
-				Field("event_containers").
-				Map(func(pp rethinkdb.Term) interface{} {
-					return pp.
-						Merge(func(ppp rethinkdb.Term) interface{} {
+			"transactions": p.
+				Field("transactions").
+				Map(func(p rethinkdb.Term) interface{} {
+					return p.
+						Merge(func(p rethinkdb.Term) interface{} {
 							return map[string]interface{}{
-								"emitter_id": rethinkdb.
+								"holder_id": rethinkdb.
 									Table(playerStore.tableName()).
-									Get(ppp.Field("emitter_id")),
-								"receiver_ids": rethinkdb.
-									Table(playerStore.tableName()).
-									GetAll(rethinkdb.Args(ppp.Field("receiver_ids"))).
-									CoerceTo("array"),
-								"subject_ids": rethinkdb.
-									Table(playerStore.tableName()).
-									GetAll(rethinkdb.Args(ppp.Field("subject_ids"))).
-									CoerceTo("array"),
+									Get(p.Field("holder_id")),
 							}
 						})
-				}).CoerceTo("array"),
+				}),
 		}
 	}
 }
 
-func (s *MatchStore) listTerm() rethinkdb.Term {
+func (s *matchStore) listTerm() rethinkdb.Term {
 	return rethinkdb.
 		Table(s.tableName()).
 		Map(func(p rethinkdb.Term) interface{} {
@@ -139,80 +131,179 @@ func (s *MatchStore) listTerm() rethinkdb.Term {
 		})
 }
 
-func (s *MatchStore) createTerm(m store.Match) rethinkdb.Term {
+func (s *matchStore) createTerm(m *protocol.Match) rethinkdb.Term {
 	return rethinkdb.
 		Table(s.tableName()).
-		Insert(matchFromStoreStruct(m))
+		Insert(matchFromProtocolStruct(m))
 }
 
-func (s *MatchStore) readTerm(id string) rethinkdb.Term {
+func (s *matchStore) readTerm(id string) rethinkdb.Term {
 	return rethinkdb.
 		Table(s.tableName()).
 		GetAll(id).
 		Merge(s.mergePredicateFunc())
 }
 
-func (s *MatchStore) endedAtTerm(id string, val *time.Time) rethinkdb.Term {
+func (s *matchStore) endedAtTerm(id string, val *time.Time) rethinkdb.Term {
 	return rethinkdb.
 		Table(s.tableName()).
 		GetAll(id).
 		Update(map[string]interface{}{
-			"ended_at": *val,
+			"ended_at": val,
 		})
 }
 
-func (s *MatchStore) addPlayerTerm(id string, name string) rethinkdb.Term {
+func (s *matchStore) connectPlayerTerm(id string, name string) rethinkdb.Term {
 	return rethinkdb.
 		Table(s.tableName()).
 		GetAll(id).
 		Update(func(p rethinkdb.Term) interface{} {
 			return map[string]interface{}{
-				"player_ids": p.
-					Field("player_ids").
-					Append(name).
-					Distinct(),
+				"connected_player_ids": rethinkdb.Branch(
+					p.
+						Field("connected_player_ids").
+						Count(func(p rethinkdb.Term) interface{} {
+							return p.Eq(name)
+						}).
+						Eq(0),
+					p.
+						Field("connected_player_ids").
+						Append(name),
+					p.
+						Field("connected_player_ids"),
+				),
 			}
 		})
 }
 
-func (s *MatchStore) removePlayerTerm(id string, name string) rethinkdb.Term {
+func (s *matchStore) disconnectPlayerTerm(id string, name string) rethinkdb.Term {
 	return rethinkdb.
 		Table(s.tableName()).
 		GetAll(id).
 		Update(func(p rethinkdb.Term) interface{} {
 			return map[string]interface{}{
-				"player_ids": p.
-					Field("player_ids").
-					Filter(func(pp rethinkdb.Term) interface{} {
-						return pp.Ne(name)
+				"connected_player_ids": p.
+					Field("connected_player_ids").
+					Filter(func(p rethinkdb.Term) interface{} {
+						return p.Ne(name)
 					}),
 			}
 		})
 }
 
-func (s *MatchStore) runningTerm(id string, val bool) rethinkdb.Term {
-	return rethinkdb.
-		Table(s.tableName()).
-		GetAll(id).
-		Update(map[string]interface{}{
-			"running": val,
-		})
-}
-
-func (s *MatchStore) createEventContainerTerm(id string, ec store.EventContainer) rethinkdb.Term {
+func (s *matchStore) playerJoinsTerm(id string, name string) rethinkdb.Term {
 	return rethinkdb.
 		Table(s.tableName()).
 		GetAll(id).
 		Update(func(p rethinkdb.Term) interface{} {
 			return map[string]interface{}{
-				"event_containers": p.
-					Field("event_containers").
-					Append(*eventContainerFromStoreStruct(ec)),
+				"player_ids": rethinkdb.Branch(
+					p.
+						Field("player_ids").
+						Count().
+						Lt(
+							p.
+								Field("number_of_players_required"),
+						).
+						And(
+							p.
+								Field("player_ids").
+								Count(func(p rethinkdb.Term) interface{} {
+									return p.Eq(name)
+								}).
+								Eq(0),
+						),
+					p.
+						Field("player_ids").
+						Append(name),
+					p.
+						Field("player_ids"),
+				),
 			}
 		})
 }
 
-func (s *MatchStore) eventContainerChangesTerm(id string) rethinkdb.Term {
+func (s *matchStore) playerLeavesTerm(id string, name string) rethinkdb.Term {
+	return rethinkdb.
+		Table(s.tableName()).
+		GetAll(id).
+		Update(func(p rethinkdb.Term) interface{} {
+			return map[string]interface{}{
+				"player_ids": rethinkdb.Branch(
+					p.
+						Field("player_ids").
+						Count(func(p rethinkdb.Term) interface{} {
+							return p.Eq(name)
+						}).
+						Gt(0),
+					p.
+						Field("player_ids").
+						Filter(func(p rethinkdb.Term) interface{} {
+							return p.Ne(name)
+						}),
+					p.
+						Field("player_ids"),
+				),
+			}
+		})
+}
+
+func (s *matchStore) createTransactionTerm(id string, trx *protocol.Transaction) rethinkdb.Term {
+	return rethinkdb.
+		Table(s.tableName()).
+		GetAll(id).
+		Update(func(p rethinkdb.Term) interface{} {
+			return map[string]interface{}{
+				"transactions": p.
+					Field("transactions").
+					Append(transactionFromProtocolStruct(trx)),
+			}
+		})
+}
+
+func (s *matchStore) updateCurrentTransactionHolderTerm(id, holderName string) rethinkdb.Term {
+	return rethinkdb.
+		Table(s.tableName()).
+		GetAll(id).
+		Update(func(p rethinkdb.Term) interface{} {
+			return map[string]interface{}{
+				"transactions": p.
+					Field("transactions").
+					ChangeAt(-1, p.
+						Field("transactions").
+						Nth(-1).
+						Merge(map[string]interface{}{
+							"holder_id": holderName,
+						}),
+					),
+			}
+		})
+}
+
+func (s *matchStore) addMessageToCurrentTransaction(id string, msg *protocol.Message) rethinkdb.Term {
+	return rethinkdb.
+		Table(s.tableName()).
+		GetAll(id).
+		Update(func(p rethinkdb.Term) interface{} {
+			return map[string]interface{}{
+				"transactions": p.
+					Field("transactions").
+					ChangeAt(-1, p.
+						Field("transactions").
+						Nth(-1).
+						Merge(func(p rethinkdb.Term) interface{} {
+							return map[string]interface{}{
+								"messages": p.
+									Field("messages").
+									Append(messageFromProtocolStruct(msg)),
+							}
+						}),
+					),
+			}
+		})
+}
+
+func (s *matchStore) matchChangesTerm(id string) rethinkdb.Term {
 	return rethinkdb.
 		Table(s.tableName()).
 		GetAll(id).
@@ -229,8 +320,8 @@ func (s *MatchStore) eventContainerChangesTerm(id string) rethinkdb.Term {
 		})
 }
 
-// List ...
-func (s *MatchStore) List() ([]string, error) {
+// List implements `store.matchStore` interface.
+func (s *matchStore) List() ([]string, error) {
 	cursor, err := s.listTerm().Run(s.queryExecuter)
 	if err != nil {
 		return nil, err
@@ -243,9 +334,9 @@ func (s *MatchStore) List() ([]string, error) {
 	return IDs, err
 }
 
-// Create ...
-func (s *MatchStore) Create(m store.Match) (string, error) {
-	wRes, err := s.createTerm(m).RunWrite(s.queryExecuter)
+// Create  implements `store.matchStore` interface.
+func (s *matchStore) Create(m protocol.Match) (string, error) {
+	wRes, err := s.createTerm(&m).RunWrite(s.queryExecuter)
 	if err != nil {
 		return "", err
 	}
@@ -254,18 +345,18 @@ func (s *MatchStore) Create(m store.Match) (string, error) {
 		return wRes.GeneratedKeys[0], nil
 	}
 
-	return "", nil
+	return m.ID, nil
 }
 
-// Read ...
-func (s *MatchStore) Read(id string) (*store.Match, error) {
+// Read  implements `store.matchStore` interface.
+func (s *matchStore) Read(id string) (*protocol.Match, error) {
 	cursor, err := s.readTerm(id).Run(s.queryExecuter)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close()
 
-	var match Match
+	var match match
 
 	err = cursor.One(&match)
 	if err != nil {
@@ -276,12 +367,12 @@ func (s *MatchStore) Read(id string) (*store.Match, error) {
 		return nil, err
 	}
 
-	return match.toStoreStruct(), nil
+	return match.toProtocolStruct(), nil
 }
 
-// EndedAt ...
-func (s *MatchStore) EndedAt(id string, val *time.Time) error {
-	_, err := s.endedAtTerm(id, val).RunWrite(s.queryExecuter)
+// EndedAt implements `store.matchStore` interface.
+func (s *matchStore) EndedAt(id string, val time.Time) error {
+	_, err := s.endedAtTerm(id, &val).RunWrite(s.queryExecuter)
 	if err == rethinkdb.ErrEmptyResult {
 		return store.DontExistError(err.Error())
 	}
@@ -289,9 +380,26 @@ func (s *MatchStore) EndedAt(id string, val *time.Time) error {
 	return err
 }
 
-// AddPlayer ...
-func (s *MatchStore) AddPlayer(id string, name string) error {
-	_, err := s.addPlayerTerm(id, name).RunWrite(s.queryExecuter)
+// ConnectPlayer implements `store.matchStore` interface.
+func (s *matchStore) ConnectPlayer(id, name string) error {
+	wRes, err := s.connectPlayerTerm(id, name).RunWrite(s.queryExecuter)
+	if err == rethinkdb.ErrEmptyResult {
+		return store.DontExistError(err.Error())
+	}
+	if err != nil {
+		return err
+	}
+
+	if wRes.Replaced == 0 {
+		return store.PlayerConnectionError(fmt.Sprintf(`The player "%s" is already connected to the match "%s"`, name, id))
+	}
+
+	return nil
+}
+
+// DisconnectPlayer implements `store.matchStore` interface.
+func (s *matchStore) DisconnectPlayer(id, name string) error {
+	_, err := s.disconnectPlayerTerm(id, name).RunWrite(s.queryExecuter)
 	if err == rethinkdb.ErrEmptyResult {
 		return store.DontExistError(err.Error())
 	}
@@ -299,9 +407,43 @@ func (s *MatchStore) AddPlayer(id string, name string) error {
 	return err
 }
 
-// RemovePlayer ...
-func (s *MatchStore) RemovePlayer(id string, name string) error {
-	_, err := s.removePlayerTerm(id, name).RunWrite(s.queryExecuter)
+// PlayerJoins implements `store.matchStore` interface.
+func (s *matchStore) PlayerJoins(id, name string) error {
+	wRes, err := s.playerJoinsTerm(id, name).RunWrite(s.queryExecuter)
+	if err == rethinkdb.ErrEmptyResult {
+		return store.DontExistError(err.Error())
+	}
+	if err != nil {
+		return err
+	}
+
+	if wRes.Replaced == 0 {
+		return store.PlayerParticipationError(fmt.Sprintf(`There are no more spot in match %s | The player "%s" is already in`, id, name))
+	}
+
+	return nil
+}
+
+// PlayerLeaves implements `store.matchStore` interface.
+func (s *matchStore) PlayerLeaves(id, name string) error {
+	wRes, err := s.playerLeavesTerm(id, name).RunWrite(s.queryExecuter)
+	if err == rethinkdb.ErrEmptyResult {
+		return store.DontExistError(err.Error())
+	}
+	if err != nil {
+		return err
+	}
+
+	if wRes.Replaced == 0 {
+		return store.PlayerParticipationError(fmt.Sprintf(`The player "%s" is already out of the match %s`, name, id))
+	}
+
+	return nil
+}
+
+// CreateTransaction implements `store.matchStore` interface.
+func (s *matchStore) CreateTransaction(id string, trx protocol.Transaction) error {
+	_, err := s.createTransactionTerm(id, &trx).RunWrite(s.queryExecuter)
 	if err == rethinkdb.ErrEmptyResult {
 		return store.DontExistError(err.Error())
 	}
@@ -309,9 +451,9 @@ func (s *MatchStore) RemovePlayer(id string, name string) error {
 	return err
 }
 
-// Running ...
-func (s *MatchStore) Running(id string, val bool) error {
-	_, err := s.runningTerm(id, val).RunWrite(s.queryExecuter)
+// UpdateCurrentTransactionHolder implements `store.matchStore` interface.
+func (s *matchStore) UpdateCurrentTransactionHolder(id, newHolderName string) error {
+	_, err := s.updateCurrentTransactionHolderTerm(id, newHolderName).RunWrite(s.queryExecuter)
 	if err == rethinkdb.ErrEmptyResult {
 		return store.DontExistError(err.Error())
 	}
@@ -319,9 +461,9 @@ func (s *MatchStore) Running(id string, val bool) error {
 	return err
 }
 
-// CreateEventContainer ...
-func (s *MatchStore) CreateEventContainer(id string, ec store.EventContainer) error {
-	_, err := s.createEventContainerTerm(id, ec).RunWrite(s.queryExecuter)
+// AddMessageToCurrentTransaction implements `store.matchStore` interface.
+func (s *matchStore) AddMessageToCurrentTransaction(id string, msg protocol.Message) error {
+	_, err := s.addMessageToCurrentTransaction(id, &msg).RunWrite(s.queryExecuter)
 	if err == rethinkdb.ErrEmptyResult {
 		return store.DontExistError(err.Error())
 	}
@@ -329,9 +471,9 @@ func (s *MatchStore) CreateEventContainer(id string, ec store.EventContainer) er
 	return err
 }
 
-// CreateEventContainerBroadcaster ...
-func (s *MatchStore) CreateEventContainerBroadcaster(id string) (*store.EventContainerBroadcaster, error) {
-	cursor, err := s.eventContainerChangesTerm(id).Run(s.queryExecuter)
+// CreateTransactionsChangeIterator implements `store.matchStore` interface.
+func (s *matchStore) CreateTransactionsChangeIterator(id string) (store.TransactionChangeIterator, error) {
+	cursor, err := s.matchChangesTerm(id).Run(s.queryExecuter)
 	if err != nil {
 		if err == rethinkdb.ErrEmptyResult {
 			return nil, store.DontExistError(err.Error())
@@ -340,27 +482,62 @@ func (s *MatchStore) CreateEventContainerBroadcaster(id string) (*store.EventCon
 		return nil, err
 	}
 
-	br := store.NewEventContainerBroadcaster()
+	return &TransactionChangeIterator{cursor: cursor, trxChanges: []store.TransactionChange{}}, nil
+}
 
-	go func() {
+type matchChangeResponse struct {
+	NewValue match `rethinkdb:"new_val"`
+	OldValue match `rethinkdb:"old_val"`
+}
+
+// TransactionChangeIterator implements `store.TransactionChangeIterator` interface.
+type TransactionChangeIterator struct {
+	mux sync.Mutex
+
+	cursor     *rethinkdb.Cursor
+	trxChanges []store.TransactionChange
+}
+
+// Next implements `store.TransactionChangeIterator` interface.
+func (s *TransactionChangeIterator) Next(trxChange *store.TransactionChange) bool {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
+	for len(s.trxChanges) == 0 {
 		var changeRes matchChangeResponse
+		if b := s.cursor.Next(&changeRes); !b {
+			return b
+		}
 
-		for cursor.Next(&changeRes) {
-			for i := len(changeRes.OldValue.EventContainers); i < len(changeRes.NewValue.EventContainers); i++ {
-				br.Emitter <- *changeRes.NewValue.EventContainers[i].toStoreStruct()
+		for i := range changeRes.NewValue.Transactions {
+			if i >= len(changeRes.OldValue.Transactions) {
+				s.trxChanges = append(s.trxChanges, store.TransactionChange{
+					Old: nil,
+					New: changeRes.NewValue.Transactions[i].toProtocolStruct(),
+				})
+			} else {
+				var (
+					oldTrx = changeRes.OldValue.Transactions[i].toProtocolStruct()
+					newTrx = changeRes.NewValue.Transactions[i].toProtocolStruct()
+				)
+
+				if !reflect.DeepEqual(oldTrx, newTrx) {
+					s.trxChanges = append(s.trxChanges, store.TransactionChange{Old: oldTrx, New: newTrx})
+				}
 			}
 		}
-	}()
+	}
 
-	go func() {
-		for {
-			<-br.Done
+	*trxChange = s.trxChanges[0]
+	s.trxChanges = s.trxChanges[1:]
 
-			if cursor.Close() == nil {
-				return
-			}
-		}
-	}()
+	return true
+}
 
-	return br, nil
+// Close implements `store.TransactionChangeIterator` interface.
+func (s *TransactionChangeIterator) Close() error {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
+	return s.cursor.Close()
 }

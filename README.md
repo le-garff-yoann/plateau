@@ -17,18 +17,18 @@
 **The code in this repository will build the binary for the [Rock–paper–scissors](https://en.wikipedia.org/wiki/Rock%E2%80%93paper%E2%80%93scissors) game.**
 
 ```bash
-go build -tags="game_rockpaperscissors run_rethinkdb" -o plateau # And build to use RethinkDB as the store.
+# Build to use RethinkDB as the store.
+go build -tags="run_rockpaperscissors run_rethinkdb" -o plateau
+# Build to use RAM as the store.
+go build -tags="run_rockpaperscissors run_inmemory" -o plateau 
 
-# ./plateau help # Print the global help.
-# ./plateau help run # Print the help for the run subcommand.
+# plateau help # Print the global help.
+# plateau help run # Print the help for the run subcommand.
 
 # Start the server.
-./plateau run \
+plateau run \
     --listen :3000 \
-    --session-key my-STRONG-secret \
-    --rethinkdb-address rethinkdb:28015 \
-    --rethinkdb-database plateau \
-    --rethinkdb-create-tables
+    --session-key my-STRONG-secret
 ```
 
 **N.B.** Please read [these instructions](CUSTOMIZING.md) is you want to "customize and build" for another game.
@@ -41,6 +41,7 @@ go build -tags="game_rockpaperscissors run_rethinkdb" -o plateau # And build to 
 
 ```bash
 BASE=http://localhost:3000
+COOKIE_FILE=me.out
 COOKIE_NAME=plateau
 PLAYER_NAME=me
 PLAYER_PASSWORD=me1234
@@ -50,7 +51,7 @@ curl $BASE/user/register \
     -d "{\"username\":\"$PLAYER_NAME\",\"password\":\"$PLAYER_PASSWORD\"}"
 
 # Log in.
-curl $BASE/user/login --cookie-jar cookies.out \
+curl $BASE/user/login --cookie-jar $COOKIE_FILE \
     -d "{\"username\":\"$PLAYER_NAME\",\"password\":\"$PLAYER_PASSWORD\"}"
 ```
 
@@ -58,18 +59,18 @@ curl $BASE/user/login --cookie-jar cookies.out \
 
 ```bash
 # Returns players.
-curl -b cookies.out $BASE/api/players
+curl -b $COOKIE_FILE $BASE/api/players
 
 # Create and returns a match.
 match=$(
-curl -b cookies.out -X POST $BASE/api/matchs \
+curl -b $COOKIE_FILE -X POST $BASE/api/matchs \
     -d '{"number_of_players_required":2}'
 )
 
 # Connect to the match throught WebSocket.
 wscat \
     -H X-Interactive:true \
-    -H Cookie:$COOKIE_NAME=$(grep $COOKIE_NAME cookies.out | awk '{print $7}') \
+    -H Cookie:$COOKIE_NAME=$(grep $COOKIE_NAME $COOKIE_FILE | awk '{print $7}') \
     -c $BASE/api/matchs/$(echo $match | jq -r .id)
 ```
 

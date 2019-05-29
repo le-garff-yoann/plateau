@@ -1,27 +1,20 @@
 package store
 
-// Player ...
-type Player struct {
-	Name string `json:"name"`
+import "plateau/protocol"
 
-	Password string `json:"-"`
+// PlayerGameStore ...
+type PlayerGameStore interface {
+	List() (names []string, err error)
+	Read(name string) (*protocol.Player, error)
 
-	Wins  uint `json:"wins"`
-	Loses uint `json:"loses"`
-	Ties  uint `json:"ties"`
-}
-
-func (s *Player) String() string {
-	return s.Name
+	IncreaseWins(name string, increase uint) error
+	IncreaseLoses(name string, increase uint) error
+	IncreaseTies(name string, increase uint) error
 }
 
 // PlayerStore ...
 type PlayerStore interface {
-	List() (names []string, errs error)
-	Create(Player) error
-	Read(playerName string) (*Player, error)
+	PlayerGameStore
 
-	IncreaseWins(playerName string, increase uint) error
-	IncreaseLoses(playerName string, increase uint) error
-	IncreaseTies(playerName string, increase uint) error
+	Create(protocol.Player) error
 }

@@ -2,13 +2,12 @@ package server
 
 import (
 	"net/http"
+	"plateau/broadcaster"
 	"plateau/store"
 	"sync"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	uuid "github.com/satori/go.uuid"
 )
 
 // ServerName is the server name.
@@ -18,65 +17,21 @@ var wsUpgrader = websocket.Upgrader{}
 
 // Server ...
 type Server struct {
-	store store.Store
+	game Game
 
-	ecBroadcastersMux sync.Mutex
-	ecBroadcasters    map[string]*store.EventContainerBroadcaster
+	matchmatchRuntimesMux sync.Mutex
+	matchRuntimes         map[string]*MatchRuntime
+
+	store store.Store
 
 	httpServer *http.Server
 
-	done chan int
-}
-
-func (s *Server) recvEventContainerBroadcaster(matchID string) (<-chan store.EventContainer, *uuid.UUID, error) {
-	if _, ok := s.ecBroadcasters[matchID]; !ok {
-		s.ecBroadcastersMux.Lock()
-		defer s.ecBroadcastersMux.Unlock()
-
-		var err error
-		s.ecBroadcasters[matchID], err = s.store.Matchs().CreateEventContainerBroadcaster(matchID)
-		if err != nil {
-			delete(s.ecBroadcasters, matchID)
-
-			return nil, nil, err
-		}
-
-		go func() {
-			s.ecBroadcasters[matchID].Run()
-		}()
-
-		recv, uuid := s.ecBroadcasters[matchID].Recv()
-
-		return recv, &uuid, nil
-	}
-
-	return nil, nil, nil
-}
-
-func (s *Server) removeRecvEventContainerBroadcaster(matchID string, uuid uuid.UUID) {
-	s.ecBroadcastersMux.Lock()
-
-	s.ecBroadcasters[matchID].RemoveRecv(uuid)
-
-	s.ecBroadcastersMux.Unlock()
-}
-
-func (s *Server) cleanupBroadcasters() {
-	s.ecBroadcastersMux.Lock()
-
-	for matchID, br := range s.ecBroadcasters {
-		if br.CountReceivers() == 0 {
-			br.Done <- 0
-
-			delete(s.ecBroadcasters, matchID)
-		}
-	}
-
-	s.ecBroadcastersMux.Unlock()
+	doneBroadcaster *broadcaster.Broadcaster
+	doneWg          sync.WaitGroup
 }
 
 // New ...
-func New(listener, listenerStaticDir string, str store.Store) (*Server, error) {
+func New(listener, listenerStaticDir string, gm Game, str store.Store) (*Server, error) {
 	if err := str.Open(); err != nil {
 		return nil, err
 	}
@@ -85,15 +40,22 @@ func New(listener, listenerStaticDir string, str store.Store) (*Server, error) {
 	ar := r.PathPrefix("/api").Subrouter()
 
 	s := &Server{
-		store:          str,
-		ecBroadcasters: make(map[string]*store.EventContainerBroadcaster),
+		game:          gm,
+		matchRuntimes: make(map[string]*MatchRuntime),
+		store:         str,
 		httpServer: &http.Server{
 			Addr:    listener,
 			Handler: r,
 		},
+		doneBroadcaster: broadcaster.New(),
 	}
 
 	ar.Use(s.loginMiddleware)
+	ar.
+		PathPrefix("/game").
+		Methods("GET").
+		HandlerFunc(s.getGameDefinitionHandler).
+		Name("readGame")
 	ar.
 		PathPrefix("/players/{name}").
 		Methods("GET").
@@ -105,12 +67,16 @@ func New(listener, listenerStaticDir string, str store.Store) (*Server, error) {
 		HandlerFunc(s.getPlayersNameHandler).
 		Name("getPlayersName")
 	ar.
+		PathPrefix("/matchs/{id}/connected-players").
+		HandlerFunc(s.getMatchConnectedPlayersNameHandler).
+		Name("getMatchPlayersName")
+	ar.
 		PathPrefix("/matchs/{id}/players").
 		HandlerFunc(s.getMatchPlayersNameHandler).
 		Name("getMatchPlayersName")
 	ar.
-		PathPrefix("/matchs/{id}/event-containers").
-		HandlerFunc(s.getMatchEventContainersHandler).
+		PathPrefix("/matchs/{id}/transactions").
+		HandlerFunc(s.getMatchTransactionsHandler).
 		Name("getMatchEventContainers")
 	ar.
 		PathPrefix("/matchs/{id}").
@@ -148,7 +114,6 @@ func New(listener, listenerStaticDir string, str store.Store) (*Server, error) {
 		Methods("DEL").
 		HandlerFunc(s.logoutUserHandler).
 		Name("logoutUser")
-	// TODO: Add an endpoint from which we can get the game implementation name and it's default settings.
 
 	if listenerStaticDir != "" {
 		r.
@@ -163,19 +128,16 @@ func New(listener, listenerStaticDir string, str store.Store) (*Server, error) {
 
 // Start ...
 func (s *Server) Start() error {
-	tk := time.NewTicker(time.Second * 5)
+	go s.doneBroadcaster.Run()
+
+	s.doneWg.Add(1)
+	ch, uuid := s.doneBroadcaster.Subscribe()
 
 	go func() {
-		for {
-			select {
-			case <-tk.C:
-				s.cleanupBroadcasters()
-			case <-s.done:
-				tk.Stop()
+		<-ch
 
-				return
-			}
-		}
+		s.doneBroadcaster.Unsubscribe(uuid)
+		s.doneWg.Done()
 	}()
 
 	return s.httpServer.ListenAndServe()
@@ -183,7 +145,10 @@ func (s *Server) Start() error {
 
 // Stop ...
 func (s *Server) Stop() error {
-	s.done <- 0
+	s.doneBroadcaster.Submit(0)
+	s.doneWg.Wait()
+
+	s.doneBroadcaster.Done()
 
 	return s.store.Close()
 }

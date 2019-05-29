@@ -1,8 +1,8 @@
 package rethinkdb
 
 import (
+	"plateau/protocol"
 	"plateau/store"
-	"sync"
 	"testing"
 	"time"
 
@@ -10,12 +10,12 @@ import (
 	rethinkdb "gopkg.in/rethinkdb/rethinkdb-go.v5"
 )
 
-func TestMatchStoreConversion(t *testing.T) {
+func TestMatchConversion(t *testing.T) {
 	t.Parallel()
 
-	m := Match{}
-	require.IsType(t, &store.Match{}, m.toStoreStruct())
-	require.IsType(t, m, *matchFromStoreStruct(*m.toStoreStruct()))
+	m := &match{}
+	require.IsType(t, &protocol.Match{}, m.toProtocolStruct())
+	require.IsType(t, m, matchFromProtocolStruct(m.toProtocolStruct()))
 }
 
 func TestMatchList(t *testing.T) {
@@ -24,14 +24,14 @@ func TestMatchList(t *testing.T) {
 	var (
 		mock = rethinkdb.NewMock()
 
-		matchStore = &MatchStore{mock}
+		str = &matchStore{mock}
 	)
 
-	mock.On(matchStore.listTerm()).Return([]string{
+	mock.On(str.listTerm()).Return([]string{
 		"foo", "bar",
 	}, nil)
 
-	matchs, err := matchStore.List()
+	matchs, err := str.List()
 	require.NoError(t, err)
 	require.Len(t, matchs, 2)
 
@@ -44,16 +44,16 @@ func TestMatchCreate(t *testing.T) {
 	var (
 		mock = rethinkdb.NewMock()
 
-		matchStore = &MatchStore{mock}
+		str = &matchStore{mock}
 
-		givenMatch = store.Match{ID: "foo"}
+		givenMatch = protocol.Match{ID: "foo"}
 	)
 
-	mock.On(matchStore.createTerm(givenMatch)).Return(
+	mock.On(str.createTerm(&givenMatch)).Return(
 		rethinkdb.WriteResponse{GeneratedKeys: []string{givenMatch.ID}},
 		nil)
 
-	id, err := matchStore.Create(givenMatch)
+	id, err := str.Create(givenMatch)
 	require.NoError(t, err)
 	require.Equal(t, givenMatch.ID, id)
 
@@ -66,20 +66,19 @@ func TestMatchRead(t *testing.T) {
 	var (
 		mock = rethinkdb.NewMock()
 
-		matchStore = &MatchStore{mock}
+		str = &matchStore{mock}
 
 		givenID       = "foo"
-		givenMatch    = Match{ID: givenID}
-		expectedMatch = *givenMatch.toStoreStruct()
+		givenMatch    = match{ID: givenID}
+		expectedMatch = *givenMatch.toProtocolStruct()
 	)
 
-	mock.On(matchStore.readTerm(givenID)).Return([]interface{}{
+	mock.On(str.readTerm(givenID)).Return([]interface{}{
 		givenMatch,
 	}, nil)
 
-	match, err := matchStore.Read(givenID)
+	match, err := str.Read(givenID)
 	require.NoError(t, err)
-	require.IsType(t, &expectedMatch, match)
 	require.Equal(t, expectedMatch.ID, match.ID)
 
 	mock.AssertExpectations(t)
@@ -91,132 +90,225 @@ func TestMatchEndedAt(t *testing.T) {
 	var (
 		mock = rethinkdb.NewMock()
 
-		matchStore = &MatchStore{mock}
+		str = &matchStore{mock}
 
-		givenMatch = Match{ID: "foo"}
-		givenTime  = time.Now()
+		givenMatch  = match{ID: "foo"}
+		endedAtTime = time.Now()
 	)
 
-	mock.On(matchStore.endedAtTerm(givenMatch.ID, &givenTime)).Return(rethinkdb.WriteResponse{},
-		nil)
+	mock.On(str.endedAtTerm(givenMatch.ID, &endedAtTime)).Return(rethinkdb.WriteResponse{}, nil)
 
-	err := matchStore.EndedAt(givenMatch.ID, &givenTime)
+	err := str.EndedAt(givenMatch.ID, endedAtTime)
 	require.NoError(t, err)
+
+	mock.AssertExpectations(t)
 }
 
-func TestMatchAddPlayer(t *testing.T) {
+func TestMatchConnectPlayer(t *testing.T) {
 	t.Parallel()
 
 	var (
 		mock = rethinkdb.NewMock()
 
-		matchStore = &MatchStore{mock}
+		str = &matchStore{mock}
 
-		givenMatchID    = "foo"
+		givenID         = "foo"
 		givenPlayerName = "bar"
 	)
 
-	mock.On(matchStore.addPlayerTerm(givenMatchID, givenPlayerName)).Return(rethinkdb.WriteResponse{},
-		nil)
+	mock.
+		On(str.connectPlayerTerm(givenID, givenPlayerName)).
+		Return(rethinkdb.WriteResponse{Replaced: 1}, nil).
+		Once()
 
-	err := matchStore.AddPlayer(givenMatchID, givenPlayerName)
+	err := str.ConnectPlayer(givenID, givenPlayerName)
 	require.NoError(t, err)
+
+	mock.
+		On(str.connectPlayerTerm(givenID, givenPlayerName)).
+		Return(rethinkdb.WriteResponse{Replaced: 0}, nil).
+		Once()
+
+	err = str.ConnectPlayer(givenID, givenPlayerName)
+	require.Error(t, err)
+
+	mock.AssertExpectations(t)
 }
 
-func TestMatchRemovePlayer(t *testing.T) {
+func TestMatchDisconnectPlayer(t *testing.T) {
 	t.Parallel()
 
 	var (
 		mock = rethinkdb.NewMock()
 
-		matchStore = &MatchStore{mock}
+		str = &matchStore{mock}
 
-		givenMatchID    = "foo"
+		givenID         = "foo"
 		givenPlayerName = "bar"
 	)
 
-	mock.On(matchStore.removePlayerTerm(givenMatchID, givenPlayerName)).Return(rethinkdb.WriteResponse{},
-		nil)
+	mock.On(str.disconnectPlayerTerm(givenID, givenPlayerName)).Return(rethinkdb.WriteResponse{}, nil)
 
-	err := matchStore.RemovePlayer(givenMatchID, givenPlayerName)
+	err := str.DisconnectPlayer(givenID, givenPlayerName)
 	require.NoError(t, err)
+
+	mock.AssertExpectations(t)
 }
 
-func TestMatchRunning(t *testing.T) {
+func TestMatchPlayerJoins(t *testing.T) {
 	t.Parallel()
 
 	var (
 		mock = rethinkdb.NewMock()
 
-		matchStore = &MatchStore{mock}
+		str = &matchStore{mock}
 
-		givenMatch   = Match{ID: "foo"}
-		givenRunning = true
+		givenID         = "foo"
+		givenPlayerName = "bar"
 	)
 
-	mock.On(matchStore.runningTerm(givenMatch.ID, givenRunning)).Return(rethinkdb.WriteResponse{},
-		nil)
+	mock.
+		On(str.playerJoinsTerm(givenID, givenPlayerName)).
+		Return(rethinkdb.WriteResponse{Replaced: 1}, nil).
+		Once()
 
-	err := matchStore.Running(givenMatch.ID, givenRunning)
+	err := str.PlayerJoins(givenID, givenPlayerName)
 	require.NoError(t, err)
+
+	mock.
+		On(str.playerJoinsTerm(givenID, givenPlayerName)).
+		Return(rethinkdb.WriteResponse{Replaced: 0}, nil).
+		Once()
+
+	err = str.PlayerJoins(givenID, givenPlayerName)
+	require.Error(t, err)
+
+	mock.AssertExpectations(t)
 }
 
-func TestMatchCreateEventContainer(t *testing.T) {
+func TestMatchPlayerLeaves(t *testing.T) {
+	t.Parallel()
+
 	var (
 		mock = rethinkdb.NewMock()
 
-		matchStore = &MatchStore{mock}
+		str = &matchStore{mock}
 
-		givenMatchID        = "foo"
-		givenEventContainer = store.EventContainer{}
+		givenID         = "foo"
+		givenPlayerName = "bar"
 	)
 
-	mock.On(matchStore.createEventContainerTerm(givenMatchID, givenEventContainer)).Return(rethinkdb.WriteResponse{},
-		nil)
+	mock.
+		On(str.playerLeavesTerm(givenID, givenPlayerName)).
+		Return(rethinkdb.WriteResponse{Replaced: 1}, nil).
+		Once()
 
-	err := matchStore.CreateEventContainer(givenMatchID, givenEventContainer)
+	err := str.PlayerLeaves(givenID, givenPlayerName)
 	require.NoError(t, err)
+
+	mock.
+		On(str.playerLeavesTerm(givenID, givenPlayerName)).
+		Return(rethinkdb.WriteResponse{Replaced: 0}, nil).
+		Once()
+
+	err = str.PlayerLeaves(givenID, givenPlayerName)
+	require.Error(t, err)
+
+	mock.AssertExpectations(t)
 }
 
-func TestMatchCreateEventContainerBroadcaster(t *testing.T) {
+func TestMatchCreateTransaction(t *testing.T) {
+	t.Parallel()
+
 	var (
 		mock = rethinkdb.NewMock()
 
-		matchStore = &MatchStore{mock}
+		str = &matchStore{mock}
 
-		givenMatchID             = "foo"
+		givenID  = "foo"
+		givenTrx = protocol.Transaction{}
+	)
+
+	mock.
+		On(str.createTransactionTerm(givenID, &givenTrx)).
+		Return(rethinkdb.WriteResponse{}, nil)
+
+	err := str.CreateTransaction(givenID, givenTrx)
+	require.NoError(t, err)
+
+	mock.AssertExpectations(t)
+}
+
+func TestMatchUpdateCurrentTransactionHolder(t *testing.T) {
+	t.Parallel()
+
+	var (
+		mock = rethinkdb.NewMock()
+
+		str        = &matchStore{mock}
+		givenID    = "foo"
+		holderName = "bar"
+	)
+
+	mock.
+		On(str.updateCurrentTransactionHolderTerm(givenID, holderName)).
+		Return(rethinkdb.WriteResponse{Replaced: 1}, nil)
+
+	err := str.UpdateCurrentTransactionHolder(givenID, holderName)
+	require.NoError(t, err)
+
+	mock.AssertExpectations(t)
+}
+
+func TestMatchAddMessageToCurrentTransaction(t *testing.T) {
+	t.Parallel()
+
+	var (
+		mock = rethinkdb.NewMock()
+
+		str     = &matchStore{mock}
+		givenID = "foo"
+		msg     = protocol.Message{}
+	)
+
+	mock.
+		On(str.addMessageToCurrentTransaction(givenID, &msg)).
+		Return(rethinkdb.WriteResponse{Replaced: 1}, nil)
+
+	err := str.AddMessageToCurrentTransaction(givenID, msg)
+	require.NoError(t, err)
+
+	mock.AssertExpectations(t)
+}
+
+func TestMatchCreateTransactionsChangeIterator(t *testing.T) {
+	t.Parallel()
+
+	var (
+		mock = rethinkdb.NewMock()
+
+		str = &matchStore{mock}
+
+		givenID                  = "foo"
 		givenMatchChangeResponse = matchChangeResponse{
-			OldValue: Match{EventContainers: []EventContainer{}},
-			NewValue: Match{EventContainers: []EventContainer{EventContainer{}, EventContainer{}}},
+			OldValue: match{Transactions: []transaction{}},
+			NewValue: match{Transactions: []transaction{transaction{}, transaction{}}},
 		}
 	)
 
-	mock.On(matchStore.eventContainerChangesTerm(givenMatchID)).Return(givenMatchChangeResponse, nil)
+	mock.On(str.matchChangesTerm(givenID)).Return(givenMatchChangeResponse, nil)
 
-	br, err := matchStore.CreateEventContainerBroadcaster(givenMatchID)
+	iterator, err := str.CreateTransactionsChangeIterator(givenID)
 	require.NoError(t, err)
 
-	var (
-		wg sync.WaitGroup
+	var trxChange store.TransactionChange
 
-		recv, _ = br.Recv()
+	for range givenMatchChangeResponse.NewValue.Transactions {
+		iterator.Next(&trxChange)
 
-		i = 0
-	)
+		require.Nil(t, trxChange.Old)
+		require.NotNil(t, trxChange.New)
+	}
 
-	go br.Run()
-
-	wg.Add(len(givenMatchChangeResponse.NewValue.EventContainers))
-	go func() {
-		for {
-			<-recv
-
-			i++
-			wg.Done()
-		}
-	}()
-
-	wg.Wait()
-
-	require.Equal(t, len(givenMatchChangeResponse.NewValue.EventContainers), i)
+	mock.AssertExpectations(t)
 }

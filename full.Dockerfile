@@ -16,7 +16,4 @@ CMD [ \
     "--listen", "${PLATEAU_LISTENER}", \
     "--listen-static-dir", "/public/", \
     "--session-key", "${PLATEAU_SESSION_KEY}", \
-    "--rethinkdb-address", "${PLATEAU_RETHINKDB_ADDRESS}", \
-    "--rethinkdb-database", "${PLATEAU_RETHINKDB_DATABASE}", \
-    "--rethinkdb-create-tables", \
 ]

@@ -27,7 +27,7 @@ func (s *Server) readPlayerHandler(w http.ResponseWriter, r *http.Request) {
 	player, err := s.store.Players().Read(v["name"])
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
-			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf("Player %s not found", v["name"])))
+			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Player "%s" not found`, v["name"])))
 		} else {
 			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 		}

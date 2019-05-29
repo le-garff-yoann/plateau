@@ -34,11 +34,13 @@ github.com/sirupsen/logrus
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.3
 github.com/spf13/pflag
-# github.com/stretchr/stew v0.0.0-20130812190256-80ef0842b48b
-github.com/stretchr/stew/slice
 # github.com/stretchr/testify v1.3.0
 github.com/stretchr/testify/require
 github.com/stretchr/testify/assert
+# github.com/thoas/go-funk v0.4.0
+github.com/thoas/go-funk
+# github.com/ulule/deepcopier v0.0.0-20171107155558-ca99b135e50f
+github.com/ulule/deepcopier
 # golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish

@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/le-garff-yoann/rethinkstore"
 	"github.com/spf13/cobra"
-	"github.com/stretchr/stew/slice"
+	"github.com/thoas/go-funk"
 	rethinkdb "gopkg.in/rethinkdb/rethinkdb-go.v5"
 )
 
@@ -15,27 +15,21 @@ var (
 	maxIdle                                                    = 1
 	maxOpen                                                    = 1
 
-	automigrate = false
+	createTables = false
 )
 
 // Store ...
 type Store struct {
 	queryExecuter rethinkdb.QueryExecutor
 
-	playerStore  *PlayerStore
-	matchStore   *MatchStore
+	playerStore  *playerStore
+	matchStore   *matchStore
 	sessionStore sessions.Store
 }
 
-// Open ...
+// Open implements `store.Store` interface.
 func (s *Store) Open() error {
-	var (
-		queryExecuter rethinkdb.QueryExecutor
-
-		err error
-	)
-
-	queryExecuter, err = rethinkdb.Connect(rethinkdb.ConnectOpts{
+	queryExecuter, err := rethinkdb.Connect(rethinkdb.ConnectOpts{
 		Address: address, Database: database,
 		Username: username, Password: password,
 		AuthKey: authkey,
@@ -46,8 +40,8 @@ func (s *Store) Open() error {
 	}
 
 	s.queryExecuter = queryExecuter
-	s.playerStore = &PlayerStore{s.queryExecuter}
-	s.matchStore = &MatchStore{s.queryExecuter}
+	s.playerStore = &playerStore{s.queryExecuter}
+	s.matchStore = &matchStore{s.queryExecuter}
 
 	s.sessionStore, err = rethinkstore.NewRethinkStore(
 		address, database,
@@ -59,7 +53,7 @@ func (s *Store) Open() error {
 		return err
 	}
 
-	if automigrate {
+	if createTables {
 		cursor, err := rethinkdb.TableList().Run(s.queryExecuter)
 		if err != nil {
 			return err
@@ -73,7 +67,7 @@ func (s *Store) Open() error {
 		for _, tableName := range []string{
 			s.playerStore.tableName(), s.matchStore.tableName(),
 		} {
-			if !slice.ContainsString(existingTables, tableName) {
+			if !funk.Contains(existingTables, tableName) {
 				if err := rethinkdb.TableCreate(tableName).Exec(s.queryExecuter); err != nil {
 					return err
 				}
@@ -84,7 +78,7 @@ func (s *Store) Open() error {
 	return err
 }
 
-// Close ...
+// Close implements `store.Store` interface.
 func (s *Store) Close() error {
 	var err error
 
@@ -101,7 +95,7 @@ func (s *Store) Close() error {
 	return err
 }
 
-// RunCommandSetter ...
+// RunCommandSetter implements `store.Store` interface.
 func (s *Store) RunCommandSetter(runCmd *cobra.Command) {
 	runCmd.
 		Flags().
@@ -125,7 +119,7 @@ func (s *Store) RunCommandSetter(runCmd *cobra.Command) {
 		IntVarP(&maxIdle, "rethinkdb-max-open", "", maxOpen, "RethinkDB max open connections")
 	runCmd.
 		Flags().
-		BoolVarP(&automigrate, "rethinkdb-create-tables", "", automigrate, "Create tables at startup")
+		BoolVarP(&createTables, "rethinkdb-create-tables", "", createTables, "Create tables at startup")
 
 	runCmd.
 		Flags().
@@ -134,17 +128,17 @@ func (s *Store) RunCommandSetter(runCmd *cobra.Command) {
 	// TODO: Add a switch to configure the session expiration (MaxAge).
 }
 
-// Players ...
+// Players implements `store.Store` interface.
 func (s *Store) Players() store.PlayerStore {
 	return s.playerStore
 }
 
-// Matchs ...
+// Matchs implements `store.Store` interface.
 func (s *Store) Matchs() store.MatchStore {
 	return s.matchStore
 }
 
-// Sessions ...
+// Sessions implements `store.Store` interface.
 func (s *Store) Sessions() sessions.Store {
 	return s.sessionStore
 }

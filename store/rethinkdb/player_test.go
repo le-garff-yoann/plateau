@@ -1,19 +1,19 @@
 package rethinkdb
 
 import (
-	"plateau/store"
+	"plateau/protocol"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	rethinkdb "gopkg.in/rethinkdb/rethinkdb-go.v5"
 )
 
-func TestPlayerStoreConversion(t *testing.T) {
+func TestPlayerConversion(t *testing.T) {
 	t.Parallel()
 
-	p := Player{}
-	require.IsType(t, &store.Player{}, p.toStoreStruct())
-	require.IsType(t, p, *playerFromStoreStruct(*p.toStoreStruct()))
+	p := &player{}
+	require.IsType(t, &protocol.Player{}, p.toProtocolStruct())
+	require.IsType(t, p, playerFromProtocolStruct(p.toProtocolStruct()))
 }
 
 func TestPlayerList(t *testing.T) {
@@ -22,14 +22,14 @@ func TestPlayerList(t *testing.T) {
 	var (
 		mock = rethinkdb.NewMock()
 
-		playerStore = &PlayerStore{mock}
+		str = &playerStore{mock}
 	)
 
-	mock.On(playerStore.listTerm()).Return([]string{
+	mock.On(str.listTerm()).Return([]string{
 		"foo", "bar",
 	}, nil)
 
-	players, err := playerStore.List()
+	players, err := str.List()
 	require.NoError(t, err)
 	require.Len(t, players, 2)
 
@@ -42,17 +42,17 @@ func TestPlayerCreate(t *testing.T) {
 	var (
 		mock = rethinkdb.NewMock()
 
-		playerStore = &PlayerStore{mock}
+		str = &playerStore{mock}
 
 		givenName   = "foo"
-		givenPlayer = store.Player{Name: givenName}
+		givenPlayer = protocol.Player{Name: givenName}
 	)
 
-	mock.On(playerStore.createTerm(givenPlayer)).Return(
+	mock.On(str.createTerm(&givenPlayer)).Return(
 		rethinkdb.WriteResponse{GeneratedKeys: []string{givenName}},
 		nil)
 
-	err := playerStore.Create(givenPlayer)
+	err := str.Create(givenPlayer)
 	require.NoError(t, err)
 
 	mock.AssertExpectations(t)
@@ -64,19 +64,18 @@ func TestPlayerRead(t *testing.T) {
 	var (
 		mock = rethinkdb.NewMock()
 
-		playerStore = &PlayerStore{mock}
+		str = &playerStore{mock}
 
-		givenPlayer    = Player{Name: "foo"}
-		expectedPlayer = *givenPlayer.toStoreStruct()
+		givenPlayer    = player{Name: "foo"}
+		expectedPlayer = *givenPlayer.toProtocolStruct()
 	)
 
-	mock.On(playerStore.readTerm(givenPlayer.Name)).Return([]interface{}{
+	mock.On(str.readTerm(givenPlayer.Name)).Return([]interface{}{
 		givenPlayer,
 	}, nil)
 
-	player, err := playerStore.Read(givenPlayer.Name)
+	player, err := str.Read(givenPlayer.Name)
 	require.NoError(t, err)
-	require.IsType(t, &expectedPlayer, player)
 	require.Equal(t, expectedPlayer.Name, player.Name)
 
 	mock.AssertExpectations(t)
@@ -89,25 +88,26 @@ func TestPlayerIncreaseScore(t *testing.T) {
 		var (
 			mock = rethinkdb.NewMock()
 
-			playerStore = &PlayerStore{mock}
+			str = &playerStore{mock}
 
-			givenPlayer = Player{Name: "foo"}
+			givenPlayer = player{Name: "foo"}
 		)
 
-		mock.On(playerStore.increaseScoreTerm(field, givenPlayer.Name, 1)).Return(rethinkdb.WriteResponse{},
-			nil)
+		mock.On(str.increaseScoreTerm(field, givenPlayer.Name, 1)).Return(rethinkdb.WriteResponse{}, nil)
 
 		var err error
 
 		switch field {
 		case "wins":
-			err = playerStore.IncreaseWins(givenPlayer.Name, 1)
+			err = str.IncreaseWins(givenPlayer.Name, 1)
 		case "loses":
-			err = playerStore.IncreaseLoses(givenPlayer.Name, 1)
+			err = str.IncreaseLoses(givenPlayer.Name, 1)
 		case "ties":
-			err = playerStore.IncreaseTies(givenPlayer.Name, 1)
+			err = str.IncreaseTies(givenPlayer.Name, 1)
 		}
 
 		require.NoError(t, err)
+
+		mock.AssertExpectations(t)
 	}
 }

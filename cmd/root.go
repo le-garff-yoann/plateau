@@ -15,6 +15,7 @@ const AppName = server.ServerName
 // RootCmd is meant to reused across cmd/*/*.go
 var (
 	serverListener, serverListenerStaticDir string
+	gm                                      server.Game
 	str                                     store.Store
 
 	rootCmd = &cobra.Command{

@@ -3,8 +3,9 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
-	"plateau/game"
+	"plateau/protocol"
 	"plateau/server/response"
 	"plateau/server/response/body"
 	"plateau/store"
@@ -26,19 +27,12 @@ func (s *Server) getMatchIDsHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) createMatchHandler(w http.ResponseWriter, r *http.Request) {
 	var (
-		reqBody store.Match
-		g       = game.New()
+		reqBody protocol.Match
 
 		now = time.Now()
 
 		err error
 	)
-
-	if err = g.Init(); err != nil {
-		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
-
-		return
-	}
 
 	if err = json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
 		response.WriteJSON(w, http.StatusBadRequest, body.New().Ko(err))
@@ -46,14 +40,14 @@ func (s *Server) createMatchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = g.IsMatchValid(&reqBody); err != nil {
+	if err = s.game.IsMatchValid(&reqBody); err != nil {
 		response.WriteJSON(w, http.StatusBadRequest, body.New().Ko(err))
 
 		return
 	}
 
-	match := store.Match{
-		CreatedAt:               &now,
+	match := protocol.Match{
+		CreatedAt:               now,
 		NumberOfPlayersRequired: reqBody.NumberOfPlayersRequired,
 	}
 
@@ -72,7 +66,7 @@ func (s *Server) readMatchHandler(w http.ResponseWriter, r *http.Request) {
 	match, err := s.store.Matchs().Read(v["id"])
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
-			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf("Match %s not found", v["id"])))
+			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, v["id"])))
 		} else {
 			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 		}
@@ -83,13 +77,35 @@ func (s *Server) readMatchHandler(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, http.StatusOK, match)
 }
 
+func (s *Server) getMatchConnectedPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
+	v := mux.Vars(r)
+
+	match, err := s.store.Matchs().Read(v["id"])
+	if err != nil {
+		if _, ok := err.(store.DontExistError); ok {
+			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, v["id"])))
+		} else {
+			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+		}
+
+		return
+	}
+
+	var names []string
+	for _, p := range match.ConnectedPlayers {
+		names = append(names, p.Name)
+	}
+
+	response.WriteJSON(w, http.StatusOK, names)
+}
+
 func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
 	v := mux.Vars(r)
 
 	match, err := s.store.Matchs().Read(v["id"])
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
-			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf("Match %s not found", v["id"])))
+			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, v["id"])))
 		} else {
 			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 		}
@@ -105,13 +121,13 @@ func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Reque
 	response.WriteJSON(w, http.StatusOK, names)
 }
 
-func (s *Server) getMatchEventContainersHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getMatchTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 	v := mux.Vars(r)
 
 	match, err := s.store.Matchs().Read(v["id"])
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
-			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf("Match %s not found", v["id"])))
+			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, v["id"])))
 		} else {
 			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 		}
@@ -119,5 +135,106 @@ func (s *Server) getMatchEventContainersHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, match.EventContainers)
+	response.WriteJSON(w, http.StatusOK, match.Transactions)
+}
+
+func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := s.store.Sessions().Get(r, ServerName)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+
+		return
+	}
+
+	var (
+		username = session.Values["username"].(string)
+
+		v = mux.Vars(r)
+	)
+
+	done := make(chan int)
+
+	s.doneWg.Add(1)
+	defer s.doneWg.Done()
+
+	srvDoneCh, srvDoneUUID := s.doneBroadcaster.Subscribe()
+	defer s.doneBroadcaster.Unsubscribe(srvDoneUUID)
+
+	if err := s.store.Matchs().ConnectPlayer(v["id"], username); err != nil {
+		statusCode := http.StatusInternalServerError
+		if _, ok := err.(store.PlayerConnectionError); ok {
+			statusCode = http.StatusConflict
+		} else {
+			log.Println(err)
+		}
+
+		w.WriteHeader(statusCode)
+
+		return
+	}
+	defer s.store.Matchs().DisconnectPlayer(v["id"], username)
+
+	mRuntime, err := s.guardRuntime(v["id"])
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+
+		return
+	}
+	defer s.unguardRuntime(v["id"])
+
+	c, err := wsUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+
+		return
+	}
+	defer c.Close()
+
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-srvDoneCh:
+				s.unguardRuntime(v["id"])
+
+				s.store.Matchs().DisconnectPlayer(v["id"], username)
+
+				s.doneBroadcaster.Unsubscribe(srvDoneUUID)
+				s.doneWg.Done()
+
+				return
+			}
+		}
+	}()
+	defer func() {
+		done <- 0
+	}()
+
+	for {
+		var requestContainer protocol.RequestContainer
+
+		if err := c.ReadJSON(&requestContainer); err != nil {
+			if c.WriteJSON(protocol.ResponseContainer{Response: protocol.ResBadRequest, Body: body.New().Ko(err)}) != nil {
+				return
+			}
+
+			continue
+		}
+
+		var err error
+		requestContainer.Player, err = s.store.Players().Read(username)
+		if err != nil {
+			if c.WriteJSON(protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}) != nil {
+				return
+			}
+
+			continue
+		}
+
+		c.WriteJSON(mRuntime.requestContainerHandler(&requestContainer))
+	}
 }

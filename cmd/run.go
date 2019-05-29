@@ -12,8 +12,6 @@ import (
 )
 
 var (
-	// serverStore *store.Store
-
 	runCmd = &cobra.Command{
 		Use:   "run",
 		Short: "Starts the server",
@@ -22,6 +20,7 @@ var (
 
 			srv, err := server.New(
 				serverListener, serverListenerStaticDir,
+				gm,
 				str,
 			)
 			if err != nil {
@@ -41,7 +40,9 @@ var (
 
 			log.Println("Gracefully stopping everything....")
 
-			srv.Stop()
+			if err := srv.Stop(); err != nil {
+				log.Fatal(err)
+			}
 
 			os.Exit(0)
 		},
@@ -60,6 +61,11 @@ func init() {
 
 	// TODO: Replace "log" with "github.com/apsdehal/go-logger".
 	log.SetOutput(os.Stdout)
+
+	gm = newGame()
+	if err := gm.Init(); err != nil {
+		log.Fatal(err)
+	}
 
 	str = newStore()
 	str.RunCommandSetter(runCmd)

@@ -7,7 +7,9 @@ type Body struct {
 }
 
 // New ...
-func New() *Body { return &Body{} }
+func New() *Body {
+	return &Body{}
+}
 
 // Ok ...
 func (s *Body) Ok(ok ...string) *Body {

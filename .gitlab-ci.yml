@@ -7,7 +7,7 @@ stages:
 image: golang:1.11.5
 
 variables:
-  _GOTAGS: "game_rockpaperscissors run_rethinkdb"
+  _GOTAGS: "run_rockpaperscissors run_inmemory"
 
 go:test:
   stage: test

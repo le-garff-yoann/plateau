@@ -17,12 +17,12 @@ func TestResponse(t *testing.T) {
 		ko = errors.New("")
 	)
 
-	require.Len(t, body.Ok().Successes, 0)
+	require.Empty(t, body.Ok().Successes)
 	require.Len(t, body.Ok(ok).Successes, 1)
 	require.Len(t, body.Ok(ok).Successes, 2)
 	require.Len(t, body.Ok(ok, ok).Successes, 4)
 
-	require.Len(t, body.Ko().Failures, 0)
+	require.Empty(t, body.Ko().Failures)
 	require.Len(t, body.Ko(ko).Failures, 1)
 	require.Len(t, body.Ko(ko).Failures, 2)
 	require.Len(t, body.Ko(ko, ko).Failures, 4)
