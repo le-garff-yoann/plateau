@@ -1,9 +1,5 @@
-# github.com/cenkalti/backoff v2.0.0+incompatible
-github.com/cenkalti/backoff
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/golang/protobuf v1.2.0
-github.com/golang/protobuf/proto
 # github.com/gorilla/context v1.1.1
 github.com/gorilla/context
 # github.com/gorilla/mux v1.7.2
@@ -14,23 +10,13 @@ github.com/gorilla/securecookie
 github.com/gorilla/sessions
 # github.com/gorilla/websocket v1.4.0
 github.com/gorilla/websocket
-# github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed
-github.com/hailocab/go-hostpool
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
-# github.com/le-garff-yoann/rethinkstore v0.0.0-20190518221643-225ee2dddb51
-github.com/le-garff-yoann/rethinkstore
-# github.com/opentracing/opentracing-go v1.0.2
-github.com/opentracing/opentracing-go
-github.com/opentracing/opentracing-go/ext
-github.com/opentracing/opentracing-go/log
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
-# github.com/sirupsen/logrus v1.0.6
-github.com/sirupsen/logrus
-# github.com/spf13/cobra v0.0.4
+# github.com/spf13/cobra v0.0.5
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.3
 github.com/spf13/pflag
@@ -41,20 +27,6 @@ github.com/stretchr/testify/assert
 github.com/thoas/go-funk
 # github.com/ulule/deepcopier v0.0.0-20171107155558-ca99b135e50f
 github.com/ulule/deepcopier
-# golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
+# golang.org/x/crypto v0.0.0-20190621222207-cc06ce4a13d4
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
-golang.org/x/crypto/pbkdf2
-golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
-golang.org/x/net/context
-# golang.org/x/sys v0.0.0-20190412213103-97732733099d
-golang.org/x/sys/unix
-golang.org/x/sys/windows
-# gopkg.in/fatih/pool.v2 v2.0.0
-gopkg.in/fatih/pool.v2
-# gopkg.in/rethinkdb/rethinkdb-go.v5 v5.0.1
-gopkg.in/rethinkdb/rethinkdb-go.v5
-gopkg.in/rethinkdb/rethinkdb-go.v5/encoding
-gopkg.in/rethinkdb/rethinkdb-go.v5/ql2
-gopkg.in/rethinkdb/rethinkdb-go.v5/types

@@ -17,18 +17,14 @@
 **The code in this repository will build the binary for the [Rock–paper–scissors](https://en.wikipedia.org/wiki/Rock%E2%80%93paper%E2%80%93scissors) game.**
 
 ```bash
-# Build to use RethinkDB as the store.
-go build -tags="run_rockpaperscissors run_rethinkdb" -o plateau
-# Build to use RAM as the store.
-go build -tags="run_rockpaperscissors run_inmemory" -o plateau 
-
+# Build to use the process memory as the store.
+go build -tags="run_rockpaperscissors run_inmemory" -o dist/plateau 
+ 
 # plateau help # Print the global help.
 # plateau help run # Print the help for the run subcommand.
 
 # Start the server.
-plateau run \
-    --listen :3000 \
-    --session-key my-STRONG-secret
+dist/plateau run -l :3000 --session-key my-STRONG-secret
 ```
 
 **N.B.** Please read [these instructions](CUSTOMIZING.md) is you want to "customize and build" for another game.
@@ -41,33 +37,27 @@ plateau run \
 
 ```bash
 BASE=http://localhost:3000
-COOKIE_FILE=me.out
 COOKIE_NAME=plateau
-PLAYER_NAME=me
-PLAYER_PASSWORD=me1234
+COOKIE_FILE=me.out
+USERINFO='{"username":"me","password":"1234"}'
 
 # Register yourself.
-curl $BASE/user/register \
-    -d "{\"username\":\"$PLAYER_NAME\",\"password\":\"$PLAYER_PASSWORD\"}"
+curl $BASE/user/register -d $USERINFO
 
 # Log in.
-curl $BASE/user/login --cookie-jar $COOKIE_FILE \
-    -d "{\"username\":\"$PLAYER_NAME\",\"password\":\"$PLAYER_PASSWORD\"}"
+curl $BASE/user/login --cookie-jar $COOKIE_FILE -d $USERINFO
 ```
 
 ### Play!
 
 ```bash
-# Returns players.
-curl -b $COOKIE_FILE $BASE/api/players
-
 # Create and returns a match.
 match=$(
 curl -b $COOKIE_FILE -X POST $BASE/api/matchs \
     -d '{"number_of_players_required":2}'
 )
 
-# Connect to the match throught WebSocket.
+# Connect to $match throught WebSocket.
 wscat \
     -H X-Interactive:true \
     -H Cookie:$COOKIE_NAME=$(grep $COOKIE_NAME $COOKIE_FILE | awk '{print $7}') \

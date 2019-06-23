@@ -9,6 +9,7 @@ import (
 	"plateau/server/response"
 	"plateau/server/response/body"
 	"plateau/store"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -214,6 +215,28 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 		done <- 0
 	}()
 
+	notificationCh, notificationUUID := mRuntime.transactionsChangesBroadcaster.Subscribe()
+	defer mRuntime.transactionsChangesBroadcaster.Unsubscribe(notificationUUID)
+
+	var writeJSONMux sync.Mutex
+	writeJSON := func(v interface{}) error {
+		writeJSONMux.Lock()
+		defer writeJSONMux.Unlock()
+
+		return c.WriteJSON(v)
+	}
+
+	go func() {
+		for {
+			v, ok := <-notificationCh
+			if !ok {
+				return
+			}
+
+			writeJSON(v.(protocol.NotificationContainer))
+		}
+	}()
+
 	for {
 		var requestContainer protocol.RequestContainer
 
@@ -235,6 +258,6 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		c.WriteJSON(mRuntime.requestContainerHandler(&requestContainer))
+		writeJSON(mRuntime.requestContainerHandler(&requestContainer))
 	}
 }

@@ -1,6 +1,8 @@
 package protocol
 
-import "github.com/thoas/go-funk"
+import (
+	"github.com/thoas/go-funk"
+)
 
 // Transaction ...
 type Transaction struct {
@@ -42,4 +44,15 @@ func (s *Transaction) FindAllByMessageCode(messageCode MessageCode) []Message {
 // IsActive ...
 func (s *Transaction) IsActive() bool {
 	return s.FindByMessageCode(MTransactionCompleted) == nil && s.FindByMessageCode(MTransactionAborded) == nil
+}
+
+// IndexTransactions ...
+func IndexTransactions(transactions []Transaction, i uint) *Transaction {
+	i++
+
+	if int(i) > len(transactions) {
+		return nil
+	}
+
+	return &transactions[len(transactions)-int(i)]
 }

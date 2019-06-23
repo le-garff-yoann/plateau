@@ -14,8 +14,11 @@ func TestRuntime(t *testing.T) {
 	var (
 		g = &surrenderGame{}
 
-		match  = protocol.Match{NumberOfPlayersRequired: 2}
-		player = protocol.Player{Name: "foo"}
+		match   = protocol.Match{NumberOfPlayersRequired: 2}
+		players = []protocol.Player{
+			protocol.Player{Name: "foo"},
+			protocol.Player{Name: "bar"},
+		}
 	)
 
 	srv := &Server{
@@ -28,23 +31,49 @@ func TestRuntime(t *testing.T) {
 
 	id, _ := srv.store.Matchs().Create(match)
 
-	srv.store.Players().Create(player)
+	for _, p := range players {
+		srv.store.Players().Create(p)
+	}
 
 	matchRuntime, err := srv.guardRuntime(id)
 	require.NoError(t, err)
 
 	require.Equal(t, protocol.ResOK, matchRuntime.requestContainerHandler(&protocol.RequestContainer{
 		Request: protocol.ReqListRequests,
-		Player:  &player,
+		Player:  &players[0],
 	}).Response)
 
 	require.Equal(t, protocol.ResOK, matchRuntime.requestContainerHandler(&protocol.RequestContainer{
 		Request: protocol.ReqPlayerWantToJoin,
-		Player:  &player,
+		Player:  &players[0],
 	}).Response)
 
 	require.Equal(t, protocol.ResForbidden, matchRuntime.requestContainerHandler(&protocol.RequestContainer{
 		Request: protocol.ReqPlayerWantToStartTheGame,
-		Player:  &player,
+		Player:  &players[0],
+	}).Response)
+
+	require.Equal(t, protocol.ResOK, matchRuntime.requestContainerHandler(&protocol.RequestContainer{
+		Request: protocol.ReqPlayerWantToJoin,
+		Player:  &players[1],
+	}).Response)
+
+	require.Equal(t, protocol.ResOK, matchRuntime.requestContainerHandler(&protocol.RequestContainer{
+		Request: protocol.ReqPlayerWantToStartTheGame,
+		Player:  &players[0],
+	}).Response)
+
+	m, _ := srv.store.Matchs().Read(id)
+	t.Log(m.Transactions)
+
+	require.Equal(t, protocol.ResOK, matchRuntime.requestContainerHandler(&protocol.RequestContainer{
+		Request: protocol.ReqPlayerAccepts,
+		Player:  &players[0],
+	}).Response)
+	m, _ = srv.store.Matchs().Read(id)
+	t.Log(m.Transactions)
+	require.Equal(t, protocol.ResOK, matchRuntime.requestContainerHandler(&protocol.RequestContainer{
+		Request: protocol.ReqPlayerAccepts,
+		Player:  &players[1],
 	}).Response)
 }

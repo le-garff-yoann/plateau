@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"plateau/broadcaster"
 	"plateau/protocol"
 	"plateau/server/response/body"
 	"plateau/store"
@@ -12,11 +13,6 @@ import (
 
 func (s *Server) guardRuntime(matchID string) (*MatchRuntime, error) {
 	if _, ok := s.matchRuntimes[matchID]; !ok {
-		match, err := s.store.Matchs().Read(matchID)
-		if err != nil {
-			return nil, err
-		}
-
 		iterator, err := s.store.Matchs().CreateTransactionsChangeIterator(matchID)
 		if err != nil {
 			return nil, err
@@ -25,15 +21,17 @@ func (s *Server) guardRuntime(matchID string) (*MatchRuntime, error) {
 		s.matchmatchRuntimesMux.Lock()
 		defer s.matchmatchRuntimesMux.Unlock()
 		s.matchRuntimes[matchID] = &MatchRuntime{
-			game:                s.game,
-			matchID:             matchID,
-			matchs:              s.store.Matchs(),
-			Matchs:              s.store.Matchs(),
-			Players:             s.store.Players(),
-			transactionsChanges: []store.TransactionChange{},
-			transactions:        match.Transactions,
-			done:                make(chan int),
+			game:                           s.game,
+			matchID:                        matchID,
+			matchs:                         s.store.Matchs(),
+			Matchs:                         s.store.Matchs(),
+			Players:                        s.store.Players(),
+			transactionsChanges:            []store.TransactionChange{},
+			transactionsChangesBroadcaster: broadcaster.New(),
+			done:                           make(chan int),
 		}
+
+		go s.matchRuntimes[matchID].transactionsChangesBroadcaster.Run()
 
 		go func() {
 			var trxChange store.TransactionChange
@@ -44,24 +42,24 @@ func (s *Server) guardRuntime(matchID string) (*MatchRuntime, error) {
 					defer r.transactionsChangesMux.Unlock()
 
 					r.transactionsChanges = append(r.transactionsChanges, trxChange)
-					if trxChange.Old == nil {
-						r.transactions = append(r.transactions, *trxChange.New)
-					} else {
-						r.transactions[len(r.transactions)-1] = *trxChange.New
-					}
+
+					r.transactionsChangesBroadcaster.Submit(protocol.NotificationContainer{
+						Notification: protocol.NTransactionChange,
+						Body:         trxChange,
+					})
 				}(s.matchRuntimes[matchID])
 			}
 		}()
 
-		go func() {
-			for {
-				<-s.matchRuntimes[matchID].done
+		go func(r *MatchRuntime) {
+			<-r.done
 
-				if iterator.Close() == nil {
-					return
-				}
+			r.transactionsChangesBroadcaster.Done()
+
+			if iterator.Close() == nil {
+				return
 			}
-		}()
+		}(s.matchRuntimes[matchID])
 	}
 
 	s.matchRuntimes[matchID].guard++
@@ -78,6 +76,8 @@ func (s *Server) unguardRuntime(matchID string) bool {
 
 		r.guard--
 		if r.guard == 0 {
+			s.matchRuntimes[matchID].done <- 0
+
 			delete(s.matchRuntimes, matchID)
 		}
 	}
@@ -96,9 +96,9 @@ type MatchRuntime struct {
 	Matchs  store.MatchGameStore
 	Players store.PlayerGameStore
 
-	transactionsChangesMux sync.RWMutex
-	transactionsChanges    []store.TransactionChange
-	transactions           []protocol.Transaction
+	transactionsChangesMux         sync.RWMutex
+	transactionsChanges            []store.TransactionChange
+	transactionsChangesBroadcaster *broadcaster.Broadcaster
 
 	done chan int
 }
@@ -111,38 +111,18 @@ func (s *MatchRuntime) TransactionsChanges() []store.TransactionChange {
 	return s.transactionsChanges
 }
 
-// Transactions ...
-func (s *MatchRuntime) Transactions() []protocol.Transaction {
-	s.transactionsChangesMux.RLock()
-	defer s.transactionsChangesMux.RUnlock()
-
-	return s.transactions
-}
-
-// Transaction ...
-func (s *MatchRuntime) Transaction(i uint) *protocol.Transaction {
-	s.transactionsChangesMux.RLock()
-	defer s.transactionsChangesMux.RUnlock()
-
-	i++
-
-	if int(i) > len(s.transactions) {
-		return nil
-	}
-
-	return &s.transactions[len(s.transactions)-int(i)]
-}
-
 func (s *MatchRuntime) requestContainerHandler(requestContainer *protocol.RequestContainer) *protocol.ResponseContainer {
-	match, err := s.Matchs.Read(s.matchID) // REFACTOR: Find a way to cache this? MatchChanges?
+	match, err := s.Matchs.Read(s.matchID)
 	if err != nil {
 		return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}
 	}
 
+	requestContainer.Match = match
+
 	ctx := baseContext(requestContainer)
 
-	if match.EndedAt == nil {
-		for _, trx := range s.Transactions() {
+	if requestContainer.Match.EndedAt == nil {
+		for _, trx := range requestContainer.Match.Transactions {
 			if trx.FindByMessageCode(protocol.MPlayerWantToStartTheGame) != nil && trx.FindByMessageCode(protocol.MTransactionCompleted) != nil {
 				return baseContext(requestContainer).Complete(
 					s.game.Context(s, requestContainer),
@@ -150,10 +130,10 @@ func (s *MatchRuntime) requestContainerHandler(requestContainer *protocol.Reques
 			}
 		}
 
-		currentTrx := s.Transaction(0)
+		currentTrx := protocol.IndexTransactions(requestContainer.Match.Transactions, 0)
 
 		if currentTrx == nil || !currentTrx.IsActive() {
-			if funk.Contains(match.Players, *requestContainer.Player) {
+			if funk.Contains(requestContainer.Match.Players, *requestContainer.Player) {
 				ctx.Complete(leaveContext(requestContainer)).Complete(wantToStartMatchContext(requestContainer))
 			} else {
 				ctx.Complete(joinContext(requestContainer))
@@ -174,7 +154,7 @@ func baseContext(requestContainer *protocol.RequestContainer) *Context {
 		On(protocol.ReqGetCurrentTransaction, func(matchRuntime *MatchRuntime, requestContainer *protocol.RequestContainer) *protocol.ResponseContainer {
 			return &protocol.ResponseContainer{
 				Response: protocol.ResOK,
-				Body:     matchRuntime.Transaction(0),
+				Body:     protocol.IndexTransactions(requestContainer.Match.Transactions, 0),
 			}
 		}).
 		On(protocol.ReqListRequests, func(matchRuntime *MatchRuntime, requestContainer *protocol.RequestContainer) *protocol.ResponseContainer {
@@ -220,12 +200,7 @@ func leaveContext(requestContainer *protocol.RequestContainer) *Context {
 func wantToStartMatchContext(requestContainer *protocol.RequestContainer) *Context {
 	return NewContext().
 		On(protocol.ReqPlayerWantToStartTheGame, func(matchRuntime *MatchRuntime, requestContainer *protocol.RequestContainer) *protocol.ResponseContainer {
-			match, err := matchRuntime.Matchs.Read(matchRuntime.matchID)
-			if err != nil {
-				return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}
-			}
-
-			if !match.IsFull() {
+			if !requestContainer.Match.IsFull() {
 				return &protocol.ResponseContainer{
 					Response: protocol.ResForbidden,
 					Body:     body.New().Ko(errors.New("There are not enough players")),
@@ -254,7 +229,7 @@ func askToStartMatchContext(requestContainer *protocol.RequestContainer) *Contex
 			}
 
 			var OKPlayersName []string
-			for _, m := range match.Transactions[len(match.Transactions)-1].FindAllByMessageCode(protocol.MPlayerAccepts) {
+			for _, m := range protocol.IndexTransactions(match.Transactions, 0).FindAllByMessageCode(protocol.MPlayerAccepts) {
 				OKPlayersName = append(OKPlayersName, m.Payload.(string))
 			}
 

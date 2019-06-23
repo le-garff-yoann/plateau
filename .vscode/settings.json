@@ -1,3 +1,4 @@
 {
+    "go.testFlags": [ "-count=1" ],
     "go.buildTags": "run_rockpaperscissors run_inmemory"
 }

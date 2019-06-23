@@ -30,6 +30,7 @@ type RequestContainer struct {
 	Request `json:"request"`
 
 	Player *Player `json:"-"`
+	Match  *Match  `json:"-"`
 }
 
 func (s RequestContainer) String() string {
