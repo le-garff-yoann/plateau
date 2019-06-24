@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"plateau/server"
 	"syscall"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	// TODO: Add a little bit of "viper".
 )
@@ -16,7 +16,9 @@ var (
 		Use:   "run",
 		Short: "Starts the server",
 		Run: func(cmd *cobra.Command, args []string) {
-			log.Println("Starting the server....")
+			logrus.SetLevel(logrus.Level(logLevel))
+
+			logrus.Info("Starting the server....")
 
 			srv, err := server.New(
 				serverListener, serverListenerStaticDir,
@@ -24,24 +26,24 @@ var (
 				str,
 			)
 			if err != nil {
-				log.Fatal(err)
+				logrus.Fatal(err)
 			}
 
 			go func() {
-				log.Fatal(srv.Start().Error())
+				logrus.Fatal(srv.Start().Error())
 			}()
 
 			sigs := make(chan os.Signal, 1)
 			signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
-			log.Println("The server is started.")
+			logrus.Info("The server is started.")
 
 			<-sigs
 
-			log.Println("Gracefully stopping everything....")
+			logrus.Info("Gracefully stopping everything....")
 
 			if err := srv.Stop(); err != nil {
-				log.Fatal(err)
+				logrus.Fatal(err)
 			}
 
 			os.Exit(0)
@@ -59,12 +61,11 @@ func init() {
 		Flags().
 		StringVarP(&serverListenerStaticDir, "listen-static-dir", "", "", "Exposes the contents of this directory at /")
 
-	// TODO: Replace "log" with "github.com/apsdehal/go-logger".
-	log.SetOutput(os.Stdout)
+	runCmd.Flags().Var(&logLevel, "log-level", "Logrus log level")
 
 	gm = newGame()
 	if err := gm.Init(); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	str = newStore()

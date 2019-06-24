@@ -33,7 +33,7 @@ func (s *Server) loginMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, err := s.store.Sessions().Get(r, ServerName)
 		if err != nil {
-			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+			response.WriteJSON(w, http.StatusForbidden, body.New().Ko(err))
 
 			return
 		}

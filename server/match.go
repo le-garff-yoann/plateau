@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"plateau/protocol"
 	"plateau/server/response"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 )
 
 func (s *Server) getMatchIDsHandler(w http.ResponseWriter, r *http.Request) {
@@ -142,7 +142,7 @@ func (s *Server) getMatchTransactionsHandler(w http.ResponseWriter, r *http.Requ
 func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := s.store.Sessions().Get(r, ServerName)
 	if err != nil {
-		log.Println(err)
+		logrus.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 
 		return
@@ -167,7 +167,7 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 		if _, ok := err.(store.PlayerConnectionError); ok {
 			statusCode = http.StatusConflict
 		} else {
-			log.Println(err)
+			logrus.Error(err)
 		}
 
 		w.WriteHeader(statusCode)
@@ -178,7 +178,7 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 
 	mRuntime, err := s.guardRuntime(v["id"])
 	if err != nil {
-		log.Println(err)
+		logrus.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 
 		return
@@ -187,7 +187,7 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 
 	c, err := wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		logrus.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 
 		return
@@ -226,6 +226,10 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 		return c.WriteJSON(v)
 	}
 
+	logCtx := logrus.
+		WithField("match", v["id"]).
+		WithField("player", username)
+
 	go func() {
 		for {
 			v, ok := <-notificationCh
@@ -233,7 +237,13 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			writeJSON(v.(protocol.NotificationContainer))
+			notificationContainer := v.(protocol.NotificationContainer)
+
+			logCtx.
+				WithField("type", "notification").
+				Debug(notificationContainer)
+
+			writeJSON(notificationContainer)
 		}
 	}()
 
@@ -241,7 +251,7 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 		var requestContainer protocol.RequestContainer
 
 		if err := c.ReadJSON(&requestContainer); err != nil {
-			if c.WriteJSON(protocol.ResponseContainer{Response: protocol.ResBadRequest, Body: body.New().Ko(err)}) != nil {
+			if writeJSON(protocol.ResponseContainer{Response: protocol.ResBadRequest, Body: body.New().Ko(err)}) != nil {
 				return
 			}
 
@@ -251,13 +261,23 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 		var err error
 		requestContainer.Player, err = s.store.Players().Read(username)
 		if err != nil {
-			if c.WriteJSON(protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}) != nil {
+			if writeJSON(protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}) != nil {
 				return
 			}
 
 			continue
 		}
 
-		writeJSON(mRuntime.requestContainerHandler(&requestContainer))
+		logCtx.
+			WithField("type", "request").
+			Debug(requestContainer)
+
+		responseContainer := mRuntime.requestContainerHandler(&requestContainer)
+
+		logCtx.
+			WithField("type", "response").
+			Debug(responseContainer)
+
+		writeJSON(responseContainer)
 	}
 }
