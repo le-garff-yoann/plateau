@@ -9,6 +9,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
+	github.com/spf13/pflag v1.0.3
 	github.com/stretchr/testify v1.3.0
 	github.com/thoas/go-funk v0.4.0
 	github.com/ulule/deepcopier v0.0.0-20171107155558-ca99b135e50f

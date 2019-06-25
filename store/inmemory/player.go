@@ -8,60 +8,60 @@ import (
 	"github.com/ulule/deepcopier"
 )
 
-type playerStore struct {
-	*inMemory
-}
+// PlayerList ...
+func (s *Transaction) PlayerList() (names []string, err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-// List ...
-func (s *playerStore) List() (names []string, err error) {
-	s.inMemory.mux.RLock()
-	defer s.inMemory.mux.RUnlock()
-
-	for _, p := range s.inMemory.players {
+	for _, p := range s.inMemoryCopy.Players {
 		names = append(names, p.Name)
 	}
 
 	return names, nil
 }
 
-// Create ...
-func (s *playerStore) Create(p protocol.Player) error {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// PlayerCreate ...
+func (s *Transaction) PlayerCreate(p protocol.Player) (err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	for _, player := range s.inMemory.players {
+	for _, player := range s.inMemoryCopy.Players {
 		if p.Name == player.Name {
 			return store.DuplicateError(fmt.Sprintf(`The player %s already exist`, p.Name))
 		}
 	}
 
-	s.inMemory.players = append(s.inMemory.players, &p)
+	s.inMemoryCopy.Players = append(s.inMemoryCopy.Players, &p)
 
 	return nil
 }
 
-// Read ...
-func (s *playerStore) Read(name string) (*protocol.Player, error) {
-	s.inMemory.mux.RLock()
-	defer s.inMemory.mux.RUnlock()
+// PlayerRead ...
+func (s *Transaction) PlayerRead(name string) (_ *protocol.Player, err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	p := s.inMemory.player(name)
+	p := s.inMemoryCopy.player(name)
 	if p == nil {
 		return nil, store.DontExistError(fmt.Sprintf(`The player %s doesn't exist`, name))
 	}
 
-	var copy protocol.Player
-	deepcopier.Copy(p).To(&copy)
+	var playerCopy protocol.Player
+	deepcopier.Copy(p).To(&playerCopy)
 
-	return &copy, nil
+	return &playerCopy, nil
 }
 
-// IncreaseWins ...
-func (s *playerStore) IncreaseWins(name string, increase uint) error {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// PlayerIncreaseWins ...
+func (s *Transaction) PlayerIncreaseWins(name string, increase uint) (err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	p := s.inMemory.player(name)
+	p := s.inMemoryCopy.player(name)
 	if p == nil {
 		return store.DontExistError(fmt.Sprintf(`The player %s doesn't exist`, name))
 	}
@@ -71,12 +71,13 @@ func (s *playerStore) IncreaseWins(name string, increase uint) error {
 	return nil
 }
 
-// IncreaseLoses ...
-func (s *playerStore) IncreaseLoses(name string, increase uint) error {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// PlayerIncreaseLoses ...
+func (s *Transaction) PlayerIncreaseLoses(name string, increase uint) (err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	p := s.inMemory.player(name)
+	p := s.inMemoryCopy.player(name)
 	if p == nil {
 		return store.DontExistError(fmt.Sprintf(`The player %s doesn't exist`, name))
 	}
@@ -86,12 +87,13 @@ func (s *playerStore) IncreaseLoses(name string, increase uint) error {
 	return nil
 }
 
-// IncreaseTies ...
-func (s *playerStore) IncreaseTies(name string, increase uint) error {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// PlayerIncreaseTies ...
+func (s *Transaction) PlayerIncreaseTies(name string, increase uint) (err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	p := s.inMemory.player(name)
+	p := s.inMemoryCopy.player(name)
 	if p == nil {
 		return store.DontExistError(fmt.Sprintf(`The player %s doesn't exist`, name))
 	}

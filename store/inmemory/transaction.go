@@ -1,32 +1,51 @@
 package inmemory
 
 import (
-	"plateau/protocol"
+	"plateau/store"
 )
 
-type transaction struct {
-	Holder protocol.Player
+// Transaction ...
+type Transaction struct {
+	errors []error
 
-	Messages []protocol.Message
+	inMemory, inMemoryCopy *inMemory
+	dealChangeSubmitter    func(*store.DealChange)
+
+	closed bool
+	done   func()
 }
 
-func transactionFromProtocolStruct(m *protocol.Transaction) *transaction {
-	return &transaction{m.Holder, m.Messages}
+func (s *Transaction) close() {
+	s.closed = true
+
+	s.done()
 }
 
-func (s *transaction) toProtocolStruct(pPlayers []*protocol.Player) *protocol.Transaction {
-	holder := s.Holder
-
-	for _, p := range pPlayers {
-		if p.Name == s.Holder.Name {
-			holder = *p
-
-			break
-		}
+// Commit ...
+func (s *Transaction) Commit() {
+	if s.Closed() {
+		panic("You cannot commit a closed transaction")
 	}
 
-	return &protocol.Transaction{
-		Holder:   holder,
-		Messages: s.Messages,
+	*s.inMemory = *s.inMemoryCopy
+	s.close()
+}
+
+// Abort ...
+func (s *Transaction) Abort() {
+	if s.Closed() {
+		panic("You cannot abort a closed transaction")
 	}
+
+	s.close()
+}
+
+// Closed ...
+func (s *Transaction) Closed() bool {
+	return s.closed
+}
+
+// Errors ...
+func (s *Transaction) Errors() []error {
+	return s.errors
 }

@@ -1,29 +1,34 @@
 package inmemory
 
 import (
+	"plateau/broadcaster"
 	"plateau/store"
+	"sync"
 
 	"github.com/gorilla/sessions"
 	"github.com/spf13/cobra"
+	"github.com/ulule/deepcopier"
 )
 
 var sessionKey string
 
 // Store ...
 type Store struct {
-	inMemory *inMemory
+	trnMux sync.Mutex
 
-	playerStore  *playerStore
-	matchStore   *matchStore
+	inMemory               *inMemory
+	dealChangesBroadcaster *broadcaster.Broadcaster
+
 	sessionStore sessions.Store
 }
 
 // Open implements `store.Store` interface.
 func (s *Store) Open() error {
-	inm := &inMemory{}
+	s.inMemory = &inMemory{}
 
-	s.playerStore = &playerStore{inm}
-	s.matchStore = newmatchStore(inm)
+	s.dealChangesBroadcaster = broadcaster.New()
+	go s.dealChangesBroadcaster.Run()
+
 	s.sessionStore = sessions.NewCookieStore([]byte([]byte(sessionKey)))
 
 	return nil
@@ -31,7 +36,9 @@ func (s *Store) Open() error {
 
 // Close implements `store.Store` interface.
 func (s *Store) Close() error {
-	return s.matchStore.close()
+	s.dealChangesBroadcaster.Done()
+
+	return nil
 }
 
 // RunCommandSetter implements `store.Store` interface.
@@ -43,17 +50,25 @@ func (s *Store) RunCommandSetter(runCmd *cobra.Command) {
 	// TODO: Add a switch to configure the session expiration (MaxAge).
 }
 
-// Players implements `store.Store` interface.
-func (s *Store) Players() store.PlayerStore {
-	return s.playerStore
-}
-
-// Matchs implements `store.Store` interface.
-func (s *Store) Matchs() store.MatchStore {
-	return s.matchStore
-}
-
 // Sessions implements `store.Store` interface.
 func (s *Store) Sessions() sessions.Store {
 	return s.sessionStore
+}
+
+// BeginTransaction ...
+func (s *Store) BeginTransaction() store.Transaction {
+	s.trnMux.Lock()
+
+	return &Transaction{
+		inMemory:     s.inMemory,
+		inMemoryCopy: s.inMemory.copy(),
+		dealChangeSubmitter: func(dealChange *store.DealChange) {
+			var dealChangeCopy store.DealChange
+			deepcopier.Copy(dealChange).To(&dealChangeCopy)
+
+			s.dealChangesBroadcaster.Submit(dealChangeCopy)
+		},
+		closed: false,
+		done:   func() { s.trnMux.Unlock() },
+	}
 }

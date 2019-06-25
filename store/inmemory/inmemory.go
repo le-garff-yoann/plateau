@@ -2,18 +2,17 @@ package inmemory
 
 import (
 	"plateau/protocol"
-	"sync"
+
+	"github.com/ulule/deepcopier"
 )
 
 type inMemory struct {
-	mux sync.RWMutex
-
-	players []*protocol.Player
-	matchs  []*match
+	Players []*protocol.Player
+	Matchs  []*match
 }
 
 func (s *inMemory) player(name string) (player *protocol.Player) {
-	for _, p := range s.players {
+	for _, p := range s.Players {
 		if p.Name == name {
 			player = p
 
@@ -25,7 +24,7 @@ func (s *inMemory) player(name string) (player *protocol.Player) {
 }
 
 func (s *inMemory) match(id string) (match *match) {
-	for _, m := range s.matchs {
+	for _, m := range s.Matchs {
 		if m.ID == id {
 			match = m
 
@@ -34,4 +33,11 @@ func (s *inMemory) match(id string) (match *match) {
 	}
 
 	return match
+}
+
+func (s *inMemory) copy() *inMemory {
+	var inMemoryCopy inMemory
+	deepcopier.Copy(s).To(&inMemoryCopy)
+
+	return &inMemoryCopy
 }

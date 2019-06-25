@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"plateau/protocol"
+	"plateau/store"
 )
 
 type surrenderGame struct {
@@ -49,7 +50,8 @@ func (s *surrenderGame) MaxPlayers() uint {
 	return s.maxPlayers
 }
 
-// Context implements `Game` interface.
-func (s *surrenderGame) Context(matchRuntime *MatchRuntime, requestContainer *protocol.RequestContainer) *Context {
+func (s *surrenderGame) Context(matchRuntime *MatchRuntime, trn store.Transaction, requestContainer *protocol.RequestContainer) *Context {
+	trn.Commit()
+
 	return NewContext()
 }

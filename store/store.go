@@ -12,7 +12,8 @@ type Store interface {
 
 	RunCommandSetter(*cobra.Command)
 
-	Players() PlayerStore
-	Matchs() MatchStore
 	Sessions() sessions.Store
+
+	BeginTransaction() Transaction
+	CreateDealsChangeIterator(id string) (DealChangeIterator, error)
 }

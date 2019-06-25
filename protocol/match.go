@@ -16,7 +16,7 @@ type Match struct {
 	NumberOfPlayersRequired uint     `json:"number_of_players_required"`
 	Players                 []Player `json:"-"`
 
-	Transactions []Transaction `json:"-"`
+	Deals []Deal `json:"-"`
 }
 
 func (s *Match) String() string {

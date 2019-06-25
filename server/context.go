@@ -12,8 +12,6 @@ func NewContext() *Context {
 // Context ...
 type Context struct {
 	handlers map[protocol.Request]func(*MatchRuntime, *protocol.RequestContainer) *protocol.ResponseContainer
-
-	
 }
 
 // Requests ...

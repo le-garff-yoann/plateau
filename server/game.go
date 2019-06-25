@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"plateau/protocol"
 	"plateau/server/response"
+	"plateau/store"
 )
 
 // Game ...
@@ -18,7 +19,7 @@ type Game interface {
 	MinPlayers() (minPlayers uint)
 	MaxPlayers() (maxPlayers uint)
 
-	Context(matchRuntime *MatchRuntime, requestContainer *protocol.RequestContainer) *Context
+	Context(*MatchRuntime, store.Transaction, *protocol.RequestContainer) *Context
 }
 
 func (s *Server) getGameDefinitionHandler(w http.ResponseWriter, r *http.Request) {

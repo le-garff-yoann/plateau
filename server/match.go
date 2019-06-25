@@ -16,7 +16,11 @@ import (
 )
 
 func (s *Server) getMatchIDsHandler(w http.ResponseWriter, r *http.Request) {
-	IDs, err := s.store.Matchs().List()
+	trn := s.store.BeginTransaction()
+
+	IDs, err := trn.MatchList()
+	defer trn.Abort()
+
 	if err != nil {
 		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
@@ -52,11 +56,17 @@ func (s *Server) createMatchHandler(w http.ResponseWriter, r *http.Request) {
 		NumberOfPlayersRequired: reqBody.NumberOfPlayersRequired,
 	}
 
-	if match.ID, err = s.store.Matchs().Create(match); err != nil {
+	trn := s.store.BeginTransaction()
+
+	if match.ID, err = trn.MatchCreate(match); err != nil {
+		trn.Abort()
+
 		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
 		return
 	}
+
+	trn.Commit()
 
 	response.WriteJSON(w, http.StatusCreated, match)
 }
@@ -64,7 +74,10 @@ func (s *Server) createMatchHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) readMatchHandler(w http.ResponseWriter, r *http.Request) {
 	v := mux.Vars(r)
 
-	match, err := s.store.Matchs().Read(v["id"])
+	trn := s.store.BeginTransaction()
+	defer trn.Abort()
+
+	match, err := trn.MatchRead(v["id"])
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
 			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, v["id"])))
@@ -81,7 +94,10 @@ func (s *Server) readMatchHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) getMatchConnectedPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
 	v := mux.Vars(r)
 
-	match, err := s.store.Matchs().Read(v["id"])
+	trn := s.store.BeginTransaction()
+	defer trn.Abort()
+
+	match, err := trn.MatchRead(v["id"])
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
 			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, v["id"])))
@@ -103,7 +119,10 @@ func (s *Server) getMatchConnectedPlayersNameHandler(w http.ResponseWriter, r *h
 func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
 	v := mux.Vars(r)
 
-	match, err := s.store.Matchs().Read(v["id"])
+	trn := s.store.BeginTransaction()
+	defer trn.Abort()
+
+	match, err := trn.MatchRead(v["id"])
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
 			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, v["id"])))
@@ -122,10 +141,13 @@ func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Reque
 	response.WriteJSON(w, http.StatusOK, names)
 }
 
-func (s *Server) getMatchTransactionsHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getMatchDealsHandler(w http.ResponseWriter, r *http.Request) {
 	v := mux.Vars(r)
 
-	match, err := s.store.Matchs().Read(v["id"])
+	trn := s.store.BeginTransaction()
+	defer trn.Abort()
+
+	match, err := trn.MatchRead(v["id"])
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
 			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, v["id"])))
@@ -136,7 +158,7 @@ func (s *Server) getMatchTransactionsHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, match.Transactions)
+	response.WriteJSON(w, http.StatusOK, match.Deals)
 }
 
 func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
@@ -162,7 +184,12 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 	srvDoneCh, srvDoneUUID := s.doneBroadcaster.Subscribe()
 	defer s.doneBroadcaster.Unsubscribe(srvDoneUUID)
 
-	if err := s.store.Matchs().ConnectPlayer(v["id"], username); err != nil {
+	trn := s.store.BeginTransaction()
+
+	err = trn.MatchConnectPlayer(v["id"], username)
+	trn.Commit()
+
+	if err != nil {
 		statusCode := http.StatusInternalServerError
 		if _, ok := err.(store.PlayerConnectionError); ok {
 			statusCode = http.StatusConflict
@@ -174,7 +201,12 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	defer s.store.Matchs().DisconnectPlayer(v["id"], username)
+	defer func() {
+		trn := s.store.BeginTransaction()
+		defer trn.Commit()
+
+		trn.MatchDisconnectPlayer(v["id"], username)
+	}()
 
 	mRuntime, err := s.guardRuntime(v["id"])
 	if err != nil {
@@ -202,7 +234,10 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 			case <-srvDoneCh:
 				s.unguardRuntime(v["id"])
 
-				s.store.Matchs().DisconnectPlayer(v["id"], username)
+				trn := s.store.BeginTransaction()
+				defer trn.Commit()
+
+				trn.MatchDisconnectPlayer(v["id"], username)
 
 				s.doneBroadcaster.Unsubscribe(srvDoneUUID)
 				s.doneWg.Done()
@@ -215,8 +250,8 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 		done <- 0
 	}()
 
-	notificationCh, notificationUUID := mRuntime.transactionsChangesBroadcaster.Subscribe()
-	defer mRuntime.transactionsChangesBroadcaster.Unsubscribe(notificationUUID)
+	notificationCh, notificationUUID := mRuntime.dealsChangesBroadcaster.Subscribe()
+	defer mRuntime.dealsChangesBroadcaster.Unsubscribe(notificationUUID)
 
 	var writeJSONMux sync.Mutex
 	writeJSON := func(v interface{}) error {
@@ -258,9 +293,12 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		var err error
-		requestContainer.Player, err = s.store.Players().Read(username)
+		trn := s.store.BeginTransaction()
+
+		requestContainer.Player, err = trn.PlayerRead(username)
 		if err != nil {
+			trn.Abort()
+
 			if writeJSON(protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}) != nil {
 				return
 			}
@@ -272,7 +310,10 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 			WithField("type", "request").
 			Debug(requestContainer)
 
-		responseContainer := mRuntime.requestContainerHandler(&requestContainer)
+		responseContainer := mRuntime.requestContainerHandler(trn, &requestContainer)
+		if !trn.Closed() {
+			panic("Transaction not closed")
+		}
 
 		logCtx.
 			WithField("type", "response").

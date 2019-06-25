@@ -7,17 +7,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMatchTransactionChange(t *testing.T) {
+func TestMatchDealChange(t *testing.T) {
 	t.Parallel()
 
-	trxChange := TransactionChange{
-		Old: &protocol.Transaction{
+	dealChange := DealChange{
+		Old: &protocol.Deal{
 			Messages: []protocol.Message{},
 		},
-		New: &protocol.Transaction{
+		New: &protocol.Deal{
 			Messages: []protocol.Message{protocol.Message{}},
 		},
 	}
 
-	require.Len(t, trxChange.NewMessages(), 1)
+	require.Len(t, dealChange.NewMessages(), 1)
 }

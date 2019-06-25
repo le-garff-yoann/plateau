@@ -70,7 +70,11 @@ func (s *Server) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.store.Players().Create(protocol.Player{Name: cred.Username, Password: string(hPassword)}); err != nil {
+	trn := s.store.BeginTransaction()
+
+	if err := trn.PlayerCreate(protocol.Player{Name: cred.Username, Password: string(hPassword)}); err != nil {
+		trn.Abort()
+
 		if _, ok := err.(store.DuplicateError); ok {
 			response.WriteJSON(w, http.StatusConflict, body.New().Ko(fmt.Errorf(`Player "%s" already exists`, cred.Username)))
 		} else {
@@ -79,6 +83,8 @@ func (s *Server) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+
+	trn.Commit()
 
 	w.WriteHeader(http.StatusCreated)
 }
@@ -98,7 +104,10 @@ func (s *Server) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	player, err := s.store.Players().Read(cred.Username)
+	trn := s.store.BeginTransaction()
+	defer trn.Abort()
+
+	player, err := trn.PlayerRead(cred.Username)
 	if err != nil {
 		httpCode := http.StatusInternalServerError
 		if _, ok := err.(store.DontExistError); ok {

@@ -6,8 +6,8 @@ import "encoding/json"
 type Notification string
 
 const (
-	// NTransactionChange ...
-	NTransactionChange Notification = "TRANSACTION_CHANGE"
+	// NDealChange ...
+	NDealChange Notification = "DEAL_CHANGE"
 )
 
 // NotificationContainer ...

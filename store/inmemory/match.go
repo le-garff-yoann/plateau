@@ -2,7 +2,6 @@ package inmemory
 
 import (
 	"fmt"
-	"plateau/broadcaster"
 	"plateau/protocol"
 	"plateau/store"
 	"time"
@@ -22,7 +21,7 @@ type match struct {
 	NumberOfPlayersRequired uint
 	Players                 map[string]protocol.Player
 
-	Transactions []transaction
+	Deals []deal
 }
 
 func matchFromProtocolStruct(m *protocol.Match) *match {
@@ -30,7 +29,7 @@ func matchFromProtocolStruct(m *protocol.Match) *match {
 		connectedplayers = make(map[string]protocol.Player)
 		players          = make(map[string]protocol.Player)
 
-		transactions []transaction
+		deals []deal
 	)
 
 	for _, p := range m.ConnectedPlayers {
@@ -41,8 +40,8 @@ func matchFromProtocolStruct(m *protocol.Match) *match {
 		players[p.Name] = p
 	}
 
-	for _, trx := range m.Transactions {
-		transactions = append(transactions, *transactionFromProtocolStruct(&trx))
+	for _, deal := range m.Deals {
+		deals = append(deals, *dealFromProtocolStruct(&deal))
 	}
 
 	return &match{
@@ -52,7 +51,7 @@ func matchFromProtocolStruct(m *protocol.Match) *match {
 		ConnectedPlayers:        connectedplayers,
 		NumberOfPlayersRequired: m.NumberOfPlayersRequired,
 		Players:                 players,
-		Transactions:            transactions,
+		Deals:                   deals,
 	}
 }
 
@@ -62,7 +61,7 @@ func (s *match) toProtocolStruct(pPlayers []*protocol.Player) *protocol.Match {
 
 		pPlayersMap = make(map[string]protocol.Player)
 
-		transactions []protocol.Transaction
+		deals []protocol.Deal
 	)
 
 	for _, p := range pPlayers {
@@ -87,8 +86,8 @@ func (s *match) toProtocolStruct(pPlayers []*protocol.Player) *protocol.Match {
 		}
 	}
 
-	for _, trx := range s.Transactions {
-		transactions = append(transactions, *trx.toProtocolStruct(pPlayers))
+	for _, deal := range s.Deals {
+		deals = append(deals, *deal.toProtocolStruct(pPlayers))
 	}
 
 	return &protocol.Match{
@@ -98,76 +97,60 @@ func (s *match) toProtocolStruct(pPlayers []*protocol.Player) *protocol.Match {
 		ConnectedPlayers:        connectedplayers,
 		NumberOfPlayersRequired: s.NumberOfPlayersRequired,
 		Players:                 players,
-		Transactions:            transactions,
+		Deals:                   deals,
 	}
 }
 
-type matchStore struct {
-	*inMemory
+// MatchList ...
+func (s *Transaction) MatchList() (IDs []string, err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	trxChangesBroadcaster *broadcaster.Broadcaster
-}
-
-func newmatchStore(inm *inMemory) *matchStore {
-	br := broadcaster.New()
-
-	go br.Run()
-
-	return &matchStore{inm, br}
-}
-
-func (s *matchStore) close() error {
-	s.trxChangesBroadcaster.Done()
-
-	return nil
-}
-
-// List ...
-func (s *matchStore) List() (IDs []string, err error) {
-	s.inMemory.mux.RLock()
-	defer s.inMemory.mux.RUnlock()
-
-	for _, m := range s.inMemory.matchs {
+	for _, m := range s.inMemoryCopy.Matchs {
 		IDs = append(IDs, m.ID)
 	}
 
 	return IDs, nil
 }
 
-// Create ...
-func (s *matchStore) Create(m protocol.Match) (id string, err error) {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// MatchCreate ...
+func (s *Transaction) MatchCreate(m protocol.Match) (id string, err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
 	m.ID = uuid.NewV4().String()
 
-	s.inMemory.matchs = append(s.inMemory.matchs, matchFromProtocolStruct(&m))
+	s.inMemoryCopy.Matchs = append(s.inMemoryCopy.Matchs, matchFromProtocolStruct(&m))
 
 	return m.ID, nil
 }
 
-// Read ...
-func (s *matchStore) Read(id string) (*protocol.Match, error) {
-	s.inMemory.mux.RLock()
-	defer s.inMemory.mux.RUnlock()
+// MatchRead ...
+func (s *Transaction) MatchRead(id string) (_ *protocol.Match, err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	m := s.inMemory.match(id)
+	m := s.inMemoryCopy.match(id)
 	if m == nil {
 		return nil, store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
 
-	var copy protocol.Match
-	deepcopier.Copy(m.toProtocolStruct(s.players)).To(&copy)
+	var matchCopy protocol.Match
+	deepcopier.Copy(m.toProtocolStruct(s.inMemoryCopy.Players)).To(&matchCopy)
 
-	return &copy, nil
+	return &matchCopy, nil
 }
 
-// EndedAt ...
-func (s *matchStore) EndedAt(id string, val time.Time) error {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// MatchEndedAt ...
+func (s *Transaction) MatchEndedAt(id string, val time.Time) (err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	m := s.inMemory.match(id)
+	m := s.inMemoryCopy.match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
@@ -177,76 +160,80 @@ func (s *matchStore) EndedAt(id string, val time.Time) error {
 	return nil
 }
 
-// CreateTransaction ...
-func (s *matchStore) CreateTransaction(id string, trx protocol.Transaction) error {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// MatchCreateDeal ...
+func (s *Transaction) MatchCreateDeal(id string, deal protocol.Deal) (err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	m := s.inMemory.match(id)
+	m := s.inMemoryCopy.match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
 
-	m.Transactions = append(m.Transactions, *transactionFromProtocolStruct(&trx))
+	m.Deals = append(m.Deals, *dealFromProtocolStruct(&deal))
 
-	s.trxChangesBroadcaster.Submit(store.TransactionChange{Old: nil, New: &trx})
+	s.dealChangeSubmitter(&store.DealChange{Old: nil, New: &deal})
 
 	return nil
 }
 
-// UpdateCurrentTransactionHolder ...
-func (s *matchStore) UpdateCurrentTransactionHolder(id, newHolderName string) error {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// MatchUpdateCurrentDealHolder ...
+func (s *Transaction) MatchUpdateCurrentDealHolder(id, newHolderName string) (err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	m := s.inMemory.match(id)
+	m := s.inMemoryCopy.match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
 
-	var oldTrx transaction
-	deepcopier.Copy(m.Transactions[len(m.Transactions)-1]).To(&oldTrx)
+	var oldDeal deal
+	deepcopier.Copy(m.Deals[len(m.Deals)-1]).To(&oldDeal)
 
-	m.Transactions[len(m.Transactions)-1].Holder.Name = newHolderName
+	m.Deals[len(m.Deals)-1].Holder.Name = newHolderName
 
-	s.trxChangesBroadcaster.Submit(store.TransactionChange{
-		Old: oldTrx.toProtocolStruct(s.players),
-		New: m.Transactions[len(m.Transactions)-1].toProtocolStruct(s.players),
+	s.dealChangeSubmitter(&store.DealChange{
+		Old: oldDeal.toProtocolStruct(s.inMemoryCopy.Players),
+		New: m.Deals[len(m.Deals)-1].toProtocolStruct(s.inMemoryCopy.Players),
 	})
 
 	return nil
 }
 
-// AddMessageToCurrentTransaction ...
-func (s *matchStore) AddMessageToCurrentTransaction(id string, message protocol.Message) error {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// MatchAddMessageToCurrentDeal ...
+func (s *Transaction) MatchAddMessageToCurrentDeal(id string, message protocol.Message) (err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	m := s.inMemory.match(id)
+	m := s.inMemoryCopy.match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
 
-	var oldTrx transaction
-	deepcopier.Copy(m.Transactions[len(m.Transactions)-1]).To(&oldTrx)
+	var oldDeal deal
+	deepcopier.Copy(m.Deals[len(m.Deals)-1]).To(&oldDeal)
 
-	trx := &m.Transactions[len(m.Transactions)-1]
-	trx.Messages = append(trx.Messages, message)
+	deal := &m.Deals[len(m.Deals)-1]
+	deal.Messages = append(deal.Messages, message)
 
-	s.trxChangesBroadcaster.Submit(store.TransactionChange{
-		Old: oldTrx.toProtocolStruct(s.players),
-		New: trx.toProtocolStruct(s.players),
-	})
+	s.dealChangeSubmitter(&store.DealChange{
+		Old: oldDeal.toProtocolStruct(s.inMemoryCopy.Players),
+		New: deal.toProtocolStruct(s.inMemoryCopy.Players),
+	}) // TODO-1
 
 	return nil
 }
 
-// ConnectPlayer ...
-func (s *matchStore) ConnectPlayer(id, name string) error {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// MatchConnectPlayer ...
+func (s *Transaction) MatchConnectPlayer(id, name string) (err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	m := s.inMemory.match(id)
+	m := s.inMemoryCopy.match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
@@ -261,12 +248,13 @@ func (s *matchStore) ConnectPlayer(id, name string) error {
 	return nil
 }
 
-// DisconnectPlayer ...
-func (s *matchStore) DisconnectPlayer(id, name string) error {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// MatchDisconnectPlayer ...
+func (s *Transaction) MatchDisconnectPlayer(id, name string) (err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	m := s.inMemory.match(id)
+	m := s.inMemoryCopy.match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
@@ -276,12 +264,13 @@ func (s *matchStore) DisconnectPlayer(id, name string) error {
 	return nil
 }
 
-// PlayerJoins ...
-func (s *matchStore) PlayerJoins(id, name string) error {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// MatchPlayerJoins ...
+func (s *Transaction) MatchPlayerJoins(id, name string) (err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	m := s.inMemory.match(id)
+	m := s.inMemoryCopy.match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
@@ -300,12 +289,13 @@ func (s *matchStore) PlayerJoins(id, name string) error {
 	return nil
 }
 
-// PlayerLeaves ...
-func (s *matchStore) PlayerLeaves(id, name string) error {
-	s.inMemory.mux.Lock()
-	defer s.inMemory.mux.Unlock()
+// MatchPlayerLeaves ...
+func (s *Transaction) MatchPlayerLeaves(id, name string) (err error) {
+	defer func() {
+		s.errors = append(s.errors, err)
+	}()
 
-	m := s.inMemory.match(id)
+	m := s.inMemoryCopy.match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
@@ -316,42 +306,6 @@ func (s *matchStore) PlayerLeaves(id, name string) error {
 	}
 
 	delete(m.Players, name)
-
-	return nil
-}
-
-// CreateTransactionsChangeIterator ...
-func (s *matchStore) CreateTransactionsChangeIterator(id string) (store.TransactionChangeIterator, error) {
-	itr := TransactionChangeIterator{trxChangesBroadcaster: s.trxChangesBroadcaster}
-
-	itr.trxChangesBroadcasterChan, itr.trxChangesBroadcasterUUID = s.trxChangesBroadcaster.Subscribe()
-
-	return &itr, nil
-}
-
-// TransactionChangeIterator implements `store.TransactionChangeIterator` interface.
-type TransactionChangeIterator struct {
-	trxChangesBroadcaster *broadcaster.Broadcaster
-
-	trxChangesBroadcasterChan <-chan interface{}
-	trxChangesBroadcasterUUID uuid.UUID
-}
-
-// Next implements `store.TransactionChangeIterator` interface.
-func (s *TransactionChangeIterator) Next(trxChange *store.TransactionChange) bool {
-	v, ok := <-s.trxChangesBroadcasterChan
-	if !ok {
-		return false
-	}
-
-	*trxChange = v.(store.TransactionChange)
-
-	return true
-}
-
-// Close implements `store.TransactionChangeIterator` interface.
-func (s *TransactionChangeIterator) Close() error {
-	s.trxChangesBroadcaster.Unsubscribe(s.trxChangesBroadcasterUUID)
 
 	return nil
 }

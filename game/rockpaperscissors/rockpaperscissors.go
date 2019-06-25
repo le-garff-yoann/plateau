@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"plateau/protocol"
 	"plateau/server"
+	"plateau/store"
 )
 
 // Game ...
@@ -52,6 +53,8 @@ func (s *Game) MaxPlayers() uint {
 }
 
 // Context implements `server.Game` interface.
-func (s *Game) Context(matchRuntime *server.MatchRuntime, requestContainer *protocol.RequestContainer) *server.Context {
+func (s *Game) Context(matchRuntime *server.MatchRuntime, trn store.Transaction, requestContainer *protocol.RequestContainer) *server.Context {
+	trn.Commit()
+
 	return server.NewContext()
 }

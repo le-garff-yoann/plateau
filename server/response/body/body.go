@@ -13,9 +13,7 @@ func New() *Body {
 
 // Ok ...
 func (s *Body) Ok(ok ...string) *Body {
-	for _, e := range ok {
-		s.Successes = append(s.Successes, e)
-	}
+	s.Successes = append(s.Successes, ok...)
 
 	return s
 }
