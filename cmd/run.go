@@ -29,8 +29,12 @@ var (
 				logrus.Fatal(err)
 			}
 
+			if err := srv.Start(); err != nil {
+				logrus.Fatal(err)
+			}
+
 			go func() {
-				logrus.Fatal(srv.Start().Error())
+				logrus.Fatal(srv.Listen().Error())
 			}()
 
 			sigs := make(chan os.Signal, 1)
@@ -64,9 +68,6 @@ func init() {
 	runCmd.Flags().Var(&logLevel, "log-level", "Logrus log level")
 
 	gm = newGame()
-	if err := gm.Init(); err != nil {
-		logrus.Fatal(err)
-	}
 
 	str = newStore()
 	str.RunCommandSetter(runCmd)

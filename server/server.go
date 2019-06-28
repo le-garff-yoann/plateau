@@ -24,6 +24,7 @@ type Server struct {
 
 	store store.Store
 
+	router     *mux.Router
 	httpServer *http.Server
 
 	doneBroadcaster *broadcaster.Broadcaster
@@ -32,6 +33,10 @@ type Server struct {
 
 // New ...
 func New(listener, listenerStaticDir string, gm Game, str store.Store) (*Server, error) {
+	if err := gm.Init(); err != nil {
+		return nil, err
+	}
+
 	if err := str.Open(); err != nil {
 		return nil, err
 	}
@@ -43,6 +48,7 @@ func New(listener, listenerStaticDir string, gm Game, str store.Store) (*Server,
 		game:          gm,
 		matchRuntimes: make(map[string]*MatchRuntime),
 		store:         str,
+		router:        r,
 		httpServer: &http.Server{
 			Addr:    listener,
 			Handler: r,
@@ -69,7 +75,7 @@ func New(listener, listenerStaticDir string, gm Game, str store.Store) (*Server,
 	ar.
 		PathPrefix("/matchs/{id}/connected-players").
 		HandlerFunc(s.getMatchConnectedPlayersNameHandler).
-		Name("getMatchPlayersName")
+		Name("getMatchConnectedPlayersName")
 	ar.
 		PathPrefix("/matchs/{id}/players").
 		HandlerFunc(s.getMatchPlayersNameHandler).
@@ -77,7 +83,7 @@ func New(listener, listenerStaticDir string, gm Game, str store.Store) (*Server,
 	ar.
 		PathPrefix("/matchs/{id}/deals").
 		HandlerFunc(s.getMatchDealsHandler).
-		Name("getMatchEventContainers")
+		Name("getMatchDeals")
 	ar.
 		PathPrefix("/matchs/{id}").
 		Headers("X-Interactive", "true").
@@ -140,7 +146,7 @@ func (s *Server) Start() error {
 		s.doneWg.Done()
 	}()
 
-	return s.httpServer.ListenAndServe()
+	return nil
 }
 
 // Stop ...
@@ -151,4 +157,9 @@ func (s *Server) Stop() error {
 	s.doneBroadcaster.Done()
 
 	return s.store.Close()
+}
+
+// Listen ...
+func (s *Server) Listen() error {
+	return s.httpServer.ListenAndServe()
 }

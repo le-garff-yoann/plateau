@@ -20,7 +20,7 @@ func TestLogrusLevel(t *testing.T) {
 	require.NoError(t, lvl.Set("info"))
 	require.Equal(t, LogrusLevel(logrus.InfoLevel), lvl)
 
-	require.Error(t, lvl.Set("hopeitdoesnotexists"))
+	require.Error(t, lvl.Set("hopeitdoesnotexist"))
 }
 
 func TestLogrusLevelType(t *testing.T) {

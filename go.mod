@@ -6,6 +6,7 @@ require (
 	github.com/gorilla/mux v1.7.2
 	github.com/gorilla/sessions v1.1.3
 	github.com/gorilla/websocket v1.4.0
+	github.com/posener/wstest v0.0.0-20180217133618-28272a7ea048 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5

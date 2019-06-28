@@ -11,18 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// import (
-// 	"fmt"
-// 	"plateau/protocol"
-// 	"plateau/store"
-// 	"sync"
-// 	"testing"
-// 	"time"
-
-// 	uuid "github.com/satori/go.uuid"
-// 	"github.com/stretchr/testify/require"
-// )
-
 func TestMatchCreateAndList(t *testing.T) {
 	t.Parallel()
 

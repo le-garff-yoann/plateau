@@ -12,7 +12,7 @@ import (
 
 func (s *Server) getPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
 	trn := s.store.BeginTransaction()
-	defer trn.Commit()
+	defer trn.Abort()
 
 	names, err := trn.PlayerList()
 	if err != nil {
@@ -28,7 +28,7 @@ func (s *Server) readPlayerHandler(w http.ResponseWriter, r *http.Request) {
 	v := mux.Vars(r)
 
 	trn := s.store.BeginTransaction()
-	defer trn.Commit()
+	defer trn.Abort()
 
 	player, err := trn.PlayerRead(v["name"])
 	if err != nil {
