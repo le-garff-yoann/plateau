@@ -7,13 +7,10 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
-	"github.com/gorilla/websocket"
 )
 
 // ServerName is the server name.
 const ServerName = "plateau"
-
-var wsUpgrader = websocket.Upgrader{}
 
 // Server ...
 type Server struct {
@@ -81,15 +78,19 @@ func New(listener, listenerStaticDir string, gm Game, str store.Store) (*Server,
 		HandlerFunc(s.getMatchDealsHandler).
 		Name("getMatchDeals")
 	ar.
-		PathPrefix("/matchs/{id}").
-		Headers("X-Interactive", "true").
-		HandlerFunc(s.connectMatchHandler).
-		Name("connectMatch")
+		PathPrefix("/matchs/{id}/notifications").
+		HandlerFunc(s.streamMatchNotificationsHandler).
+		Name("streamMatchNotifications")
 	ar.
 		PathPrefix("/matchs/{id}").
 		Methods("GET").
 		HandlerFunc(s.readMatchHandler).
 		Name("readMatch")
+	ar.
+		PathPrefix("/matchs/{id}").
+		Methods("PATCH").
+		HandlerFunc(s.patchMatchHandler).
+		Name("patchMatch")
 	ar.
 		PathPrefix("/matchs").
 		Methods("GET").

@@ -31,7 +31,7 @@ dist/plateau run -l :3000 --session-key my-STRONG-secret
 
 **N.B.** Parameters to the `run` subcommand may vary function of the flags declared by `store.RunCommandSetter(*cobra.Command)` (and thus by the implementation of `store.Store`).
 
-## API
+## A quick look at the API
 
 ### Got yourself a session
 
@@ -52,16 +52,19 @@ curl $BASE/user/login --cookie-jar $COOKIE_FILE -d $USERINFO
 
 ```bash
 # Create and returns a match.
-match=$(
+match_id=$(
 curl -b $COOKIE_FILE -X POST $BASE/api/matchs \
-    -d '{"number_of_players_required":2}'
+    -d '{"number_of_players_required":2}' \
+    | jq -r .id
 )
 
-# Connect to $match throught WebSocket.
-wscat \
-    -H X-Interactive:true \
-    -H Cookie:$COOKIE_NAME=$(grep $COOKIE_NAME $COOKIE_FILE | awk '{print $7}') \
-    -c $BASE/api/matchs/$(echo $match | jq -r .id)
+# Listen for changes.
+curl -b $COOKIE_FILE \
+    $BASE/api/matchs/$match_id/notifications &
+
+# Read or modify the state of the match with an in-game request.
+curl -b $COOKIE_FILE -X PATCH $BASE/api/matchs/$match_id \
+    -d '{"request":"LIST_REQUESTS"}'
 ```
 
 ## Frontend

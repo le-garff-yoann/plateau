@@ -59,9 +59,9 @@ func TestLoginHandlers(t *testing.T) {
 		return rr
 	}
 
-	require.Equal(t, 401, newRecorder(loginH).Code)
-	require.Equal(t, 201, newRecorder(registerH).Code)
-	require.Equal(t, 409, newRecorder(registerH).Code)
-	require.Equal(t, 201, newRecorder(loginH).Code)
-	require.Equal(t, 201, newRecorder(logoutH).Code)
+	require.Equal(t, http.StatusUnauthorized, newRecorder(loginH).Code)
+	require.Equal(t, http.StatusCreated, newRecorder(registerH).Code)
+	require.Equal(t, http.StatusConflict, newRecorder(registerH).Code)
+	require.Equal(t, http.StatusCreated, newRecorder(loginH).Code)
+	require.Equal(t, http.StatusCreated, newRecorder(logoutH).Code)
 }

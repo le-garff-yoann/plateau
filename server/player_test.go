@@ -32,7 +32,7 @@ func TestGetPlayersNameHandler(t *testing.T) {
 	}
 
 	rr := newRecorder()
-	require.Equal(t, 200, rr.Code)
+	require.Equal(t, http.StatusOK, rr.Code)
 	require.JSONEq(t, "null", rr.Body.String())
 
 	player := protocol.Player{Name: "foo"}
@@ -43,7 +43,7 @@ func TestGetPlayersNameHandler(t *testing.T) {
 	trn.Commit()
 
 	rr = newRecorder()
-	require.Equal(t, 200, rr.Code)
+	require.Equal(t, http.StatusOK, rr.Code)
 	require.JSONEq(t, fmt.Sprintf(`["%s"]`, player.Name), rr.Body.String())
 }
 
@@ -74,12 +74,12 @@ func TestReadPlayerNameHandler(t *testing.T) {
 		return rr
 	}
 
-	require.Equal(t, 404, newRecorder().Code)
+	require.Equal(t, http.StatusNotFound, newRecorder().Code)
 
 	trn := srv.store.BeginTransaction()
 
 	trn.PlayerCreate(player)
 	trn.Commit()
 
-	require.Equal(t, 200, newRecorder().Code)
+	require.Equal(t, http.StatusOK, newRecorder().Code)
 }

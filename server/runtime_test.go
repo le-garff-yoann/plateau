@@ -42,7 +42,7 @@ func TestRuntime(t *testing.T) {
 	matchRuntime, err := srv.guardRuntime(id)
 	require.NoError(t, err)
 
-	require.Equal(t, protocol.ResOK, matchRuntime.requestContainerHandler(
+	require.Equal(t, protocol.ResOK, matchRuntime.reqContainerHandler(
 		srv.store.BeginTransaction(),
 		&protocol.RequestContainer{
 			Request: protocol.ReqListRequests,
@@ -50,7 +50,7 @@ func TestRuntime(t *testing.T) {
 		}).Response,
 	)
 
-	require.Equal(t, protocol.ResOK, matchRuntime.requestContainerHandler(
+	require.Equal(t, protocol.ResOK, matchRuntime.reqContainerHandler(
 		srv.store.BeginTransaction(),
 		&protocol.RequestContainer{
 			Request: protocol.ReqPlayerWantToJoin,
@@ -58,7 +58,7 @@ func TestRuntime(t *testing.T) {
 		}).Response,
 	)
 
-	require.Equal(t, protocol.ResForbidden, matchRuntime.requestContainerHandler(
+	require.Equal(t, protocol.ResForbidden, matchRuntime.reqContainerHandler(
 		srv.store.BeginTransaction(),
 		&protocol.RequestContainer{
 			Request: protocol.ReqPlayerWantToStartTheGame,
@@ -66,7 +66,7 @@ func TestRuntime(t *testing.T) {
 		}).Response,
 	)
 
-	require.Equal(t, protocol.ResOK, matchRuntime.requestContainerHandler(
+	require.Equal(t, protocol.ResOK, matchRuntime.reqContainerHandler(
 		srv.store.BeginTransaction(),
 		&protocol.RequestContainer{
 			Request: protocol.ReqPlayerWantToJoin,
@@ -74,7 +74,7 @@ func TestRuntime(t *testing.T) {
 		}).Response,
 	)
 
-	require.Equal(t, protocol.ResOK, matchRuntime.requestContainerHandler(
+	require.Equal(t, protocol.ResOK, matchRuntime.reqContainerHandler(
 		srv.store.BeginTransaction(),
 		&protocol.RequestContainer{
 			Request: protocol.ReqPlayerWantToStartTheGame,
@@ -82,7 +82,7 @@ func TestRuntime(t *testing.T) {
 		}).Response,
 	)
 
-	require.Equal(t, protocol.ResOK, matchRuntime.requestContainerHandler(
+	require.Equal(t, protocol.ResOK, matchRuntime.reqContainerHandler(
 		srv.store.BeginTransaction(),
 		&protocol.RequestContainer{
 			Request: protocol.ReqPlayerAccepts,
@@ -90,7 +90,7 @@ func TestRuntime(t *testing.T) {
 		}).Response,
 	)
 
-	require.Equal(t, protocol.ResOK, matchRuntime.requestContainerHandler(
+	require.Equal(t, protocol.ResOK, matchRuntime.reqContainerHandler(
 		srv.store.BeginTransaction(),
 		&protocol.RequestContainer{
 			Request: protocol.ReqPlayerAccepts,

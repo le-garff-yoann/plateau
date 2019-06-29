@@ -6,6 +6,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMatchString(t *testing.T) {
+	match := Match{ID: "foo"}
+
+	require.Equal(t, match.ID, match.String())
+}
+
 func TestMatchIsFull(t *testing.T) {
 	t.Parallel()
 

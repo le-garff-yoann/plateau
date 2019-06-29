@@ -17,7 +17,10 @@ type NotificationContainer struct {
 }
 
 func (s *NotificationContainer) String() string {
-	b, _ := json.Marshal(s)
+	b, err := json.Marshal(s)
+	if err != nil {
+		panic(err)
+	}
 
 	return string(b)
 }

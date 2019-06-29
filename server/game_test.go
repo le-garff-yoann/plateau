@@ -56,7 +56,7 @@ func (s *surrenderGame) MaxPlayers() uint {
 	return s.maxPlayers
 }
 
-func (s *surrenderGame) Context(matchRuntime *MatchRuntime, trn store.Transaction, requestContainer *protocol.RequestContainer) *Context {
+func (s *surrenderGame) Context(matchRuntime *MatchRuntime, trn store.Transaction, reqContainer *protocol.RequestContainer) *Context {
 	trn.Commit()
 
 	return NewContext()
@@ -77,7 +77,7 @@ func TestGetGameDefinitionHandler(t *testing.T) {
 
 	h.ServeHTTP(rr, req)
 
-	require.Equal(t, 200, rr.Code)
+	require.Equal(t, http.StatusOK, rr.Code)
 	require.JSONEq(t, fmt.Sprintf(
 		`{"name":"%s","description":"%s","min_players":%d,"max_players":%d}`,
 		srv.game.Name(), srv.game.Description(),

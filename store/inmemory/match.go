@@ -204,7 +204,7 @@ func (s *Transaction) MatchAddMessageToCurrentDeal(id string, message protocol.M
 	s.dealChangeSubmitter(&store.DealChange{
 		Old: oldDeal.toProtocolStruct(s.inMemoryCopy.Players),
 		New: deal.toProtocolStruct(s.inMemoryCopy.Players),
-	}) // TODO-1
+	})
 
 	return nil
 }

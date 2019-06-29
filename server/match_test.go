@@ -34,7 +34,7 @@ func TestGetMatchIDsHandlerHandler(t *testing.T) {
 	}
 
 	rr := newRecorder()
-	require.Equal(t, 200, rr.Code)
+	require.Equal(t, http.StatusOK, rr.Code)
 	require.JSONEq(t, "null", rr.Body.String())
 
 	trn := srv.store.BeginTransaction()
@@ -43,7 +43,7 @@ func TestGetMatchIDsHandlerHandler(t *testing.T) {
 	trn.Commit()
 
 	rr = newRecorder()
-	require.Equal(t, 200, rr.Code)
+	require.Equal(t, http.StatusOK, rr.Code)
 	require.JSONEq(t, fmt.Sprintf(`["%s"]`, id), rr.Body.String())
 }
 
@@ -71,13 +71,13 @@ func testCreateAndReadMatchHandler(t *testing.T) (*Server, *protocol.Match) {
 		return rr
 	}
 
-	require.Equal(t, 404, newRecorder(readH, req).Code)
+	require.Equal(t, http.StatusNotFound, newRecorder(readH, req).Code)
 
 	req, err = http.NewRequest("POST", "", strings.NewReader(`{"number_of_players_required":2}`))
 	require.NoError(t, err)
 
 	res := newRecorder(createH, req)
-	require.Equal(t, 201, res.Code)
+	require.Equal(t, http.StatusCreated, res.Code)
 
 	var match protocol.Match
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&match))
@@ -89,7 +89,7 @@ func testCreateAndReadMatchHandler(t *testing.T) (*Server, *protocol.Match) {
 		"id": match.ID,
 	})
 
-	require.Equal(t, 200, newRecorder(readH, req).Code)
+	require.Equal(t, http.StatusOK, newRecorder(readH, req).Code)
 
 	return srv, &match
 }
@@ -100,62 +100,138 @@ func TestCreateAndReadMatchHandler(t *testing.T) {
 	testCreateAndReadMatchHandler(t)
 }
 
-// func TestConnectMatchHandler(t *testing.T) {
-// 	t.Parallel()
+func TestStreamMatchNotificationsHandler(t *testing.T) {
+	t.Parallel()
 
-// 	srv, match := testCreateAndReadMatchHandler(t)
+	// srv, match := testCreateAndReadMatchHandler(t)
+	srv, _ := testCreateAndReadMatchHandler(t)
 
-// 	srv.Start()
-// 	defer srv.Stop()
+	// srv.Start()
+	// defer srv.Stop()
 
-// 	var (
-// 		registerH = http.Handler(srv.router.Get("registerUser").GetHandler())
-// 		loginH    = http.Handler(srv.router.Get("loginUser").GetHandler())
+	h := http.Handler(srv.router.Get("streamMatchNotifications").GetHandler())
 
-// 		connectH = http.Handler(srv.router.Get("connectMatch").GetHandler())
+	req, err := http.NewRequest("GET", "", nil)
+	require.NoError(t, err)
 
-// 		players = map[string]protocol.Player{
-// 			"foo": protocol.Player{Name: "foo", Password: "foo"},
-// 			"bar": protocol.Player{Name: "bar", Password: "bar"},
-// 		}
-// 	)
+	rr := httptest.NewRecorder()
 
-// 	headers := make(map[string]http.Header)
+	go h.ServeHTTP(rr, req)
 
-// 	newPlayerRecorder := func(h http.Handler, p *protocol.Player) *httptest.ResponseRecorder {
-// 		req, err := http.NewRequest("POST", "",
-// 			strings.NewReader(fmt.Sprintf(`{"username":"%s","password":"%s"}`, p.Name, p.Password)))
-// 		require.NoError(t, err)
+	// FIXME: rr.Body does not "refresh" on flusher.Flush().
 
-// 		rr := httptest.NewRecorder()
+	// var (
+	// 	hits = 0
 
-// 		h.ServeHTTP(rr, req)
+	// 	done = make(chan int)
+	// )
 
-// 		require.Equal(t, 201, rr.Code)
+	// go func() {
+	// 	delim := []byte{':', ' '}
 
-// 		return rr
-// 	}
+	// 	for {
+	// 		b, err := rr.Body.ReadBytes('\n')
+	// 		switch err {
+	// 		case nil:
+	// 			panic(err)
+	// 		case io.EOF:
+	// 			done <- 0
 
-// 	for _, p := range players {
-// 		newPlayerRecorder(registerH, &p)
+	// 			return
+	// 		}
 
-// 		rr := newPlayerRecorder(loginH, &p)
+	// 		if len(b) < 2 {
+	// 			continue
+	// 		}
 
-// 		headers[p.Name] = http.Header{}
+	// 		spl := bytes.Split(b, delim)
 
-// 		for _, c := range rr.Result().Cookies() {
-// 			headers[p.Name].Add(c.Name, c.Value)
-// 		}
+	// 		if len(spl) < 2 {
+	// 			continue
+	// 		}
 
-// 		headers[p.Name].Add("X-Interactive", "true")
-// 	}
+	// 		hits++
+	// 		if hits == 2 {
+	// 			done <- 0
+	// 		}
+	// 	}
+	// }()
 
-// 	d := wstest.NewDialer(connectH)
+	// trn := srv.store.BeginTransaction()
 
-// 	c, res, err := d.Dial(fmt.Sprintf("ws://x/api/matchs/%s", match.ID), headers["foo"])
-// 	require.NoError(t, err)
+	// trn.MatchCreateDeal(match.ID, protocol.Deal{})
+	// trn.MatchAddMessageToCurrentDeal(match.ID, protocol.Message{})
 
-// 	c.Close()
+	// trn.Commit()
 
-// 	require.Equal(t, http.StatusSwitchingProtocols, res.StatusCode)
-// }
+	// <-done
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	// require.Equal(t, 2, hits)
+}
+
+func TestPatchMatchHandler(t *testing.T) {
+	t.Parallel()
+
+	srv, match := testCreateAndReadMatchHandler(t)
+
+	var (
+		registerH = http.Handler(srv.router.Get("registerUser").GetHandler())
+		loginH    = http.Handler(srv.router.Get("loginUser").GetHandler())
+
+		patchMatchtH = http.Handler(srv.router.Get("patchMatch").GetHandler())
+
+		players = map[string]protocol.Player{
+			"foo": protocol.Player{Name: "foo", Password: "foo"},
+			"bar": protocol.Player{Name: "bar", Password: "bar"},
+		}
+	)
+
+	cookies := make(map[string][]*http.Cookie)
+
+	newPlayerRecorder := func(h http.Handler, p *protocol.Player) *httptest.ResponseRecorder {
+		req, err := http.NewRequest("POST", "",
+			strings.NewReader(fmt.Sprintf(`{"username":"%s","password":"%s"}`, p.Name, p.Password)))
+		require.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+
+		h.ServeHTTP(rr, req)
+
+		require.Equal(t, http.StatusCreated, rr.Code)
+
+		return rr
+	}
+
+	for _, p := range players {
+		newPlayerRecorder(registerH, &p)
+
+		rr := newPlayerRecorder(loginH, &p)
+
+		cookies[p.Name] = rr.Result().Cookies()
+	}
+
+	patchMatchtRecorder := func(p *protocol.Player, post string) *httptest.ResponseRecorder {
+		req, err := http.NewRequest("PATCH", "", strings.NewReader(post))
+		require.NoError(t, err)
+
+		req = mux.SetURLVars(req, map[string]string{
+			"id": match.ID,
+		})
+
+		for _, c := range cookies[p.Name] {
+			req.AddCookie(c)
+		}
+
+		rr := httptest.NewRecorder()
+
+		patchMatchtH.ServeHTTP(rr, req)
+
+		return rr
+	}
+
+	for _, p := range players {
+		require.Equal(t, http.StatusBadRequest, patchMatchtRecorder(&p, "").Code)
+		require.Equal(t, http.StatusOK, patchMatchtRecorder(&p, "{}").Code)
+	}
+}

@@ -25,15 +25,15 @@ func (s *Server) getPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) readPlayerHandler(w http.ResponseWriter, r *http.Request) {
-	v := mux.Vars(r)
+	playerName := mux.Vars(r)["name"]
 
 	trn := s.store.BeginTransaction()
 	defer trn.Abort()
 
-	player, err := trn.PlayerRead(v["name"])
+	player, err := trn.PlayerRead(playerName)
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
-			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Player "%s" not found`, v["name"])))
+			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Player "%s" not found`, playerName)))
 		} else {
 			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 		}

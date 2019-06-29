@@ -51,10 +51,10 @@ func (s *Context) Complete(context *Context) *Context {
 	return s
 }
 
-func (s *Context) handle(matchRuntime *MatchRuntime, requestContainer *protocol.RequestContainer) *protocol.ResponseContainer {
-	handlerFunc, ok := s.handlers[requestContainer.Request]
+func (s *Context) handle(matchRuntime *MatchRuntime, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
+	handlerFunc, ok := s.handlers[reqContainer.Request]
 	if ok {
-		return handlerFunc(matchRuntime, requestContainer)
+		return handlerFunc(matchRuntime, reqContainer)
 	}
 
 	return &protocol.ResponseContainer{Response: protocol.ResNotImplemented}

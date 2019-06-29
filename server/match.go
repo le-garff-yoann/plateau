@@ -2,13 +2,13 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"plateau/protocol"
 	"plateau/server/response"
 	"plateau/server/response/body"
 	"plateau/store"
-	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -72,15 +72,15 @@ func (s *Server) createMatchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) readMatchHandler(w http.ResponseWriter, r *http.Request) {
-	v := mux.Vars(r)
+	matchID := mux.Vars(r)["id"]
 
 	trn := s.store.BeginTransaction()
 	defer trn.Abort()
 
-	match, err := trn.MatchRead(v["id"])
+	match, err := trn.MatchRead(matchID)
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
-			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, v["id"])))
+			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, matchID)))
 		} else {
 			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 		}
@@ -92,15 +92,15 @@ func (s *Server) readMatchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
-	v := mux.Vars(r)
+	matchID := mux.Vars(r)["id"]
 
 	trn := s.store.BeginTransaction()
 	defer trn.Abort()
 
-	match, err := trn.MatchRead(v["id"])
+	match, err := trn.MatchRead(matchID)
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
-			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, v["id"])))
+			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, matchID)))
 		} else {
 			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 		}
@@ -117,15 +117,15 @@ func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) getMatchDealsHandler(w http.ResponseWriter, r *http.Request) {
-	v := mux.Vars(r)
+	matchID := mux.Vars(r)["id"]
 
 	trn := s.store.BeginTransaction()
 	defer trn.Abort()
 
-	match, err := trn.MatchRead(v["id"])
+	match, err := trn.MatchRead(matchID)
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
-			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, v["id"])))
+			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, matchID)))
 		} else {
 			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 		}
@@ -136,22 +136,19 @@ func (s *Server) getMatchDealsHandler(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, http.StatusOK, match.Deals)
 }
 
-func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := s.store.Sessions().Get(r, ServerName)
-	if err != nil {
-		logrus.Error(err)
-		w.WriteHeader(http.StatusInternalServerError)
+func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(errors.New("Cannot flush")))
 
 		return
 	}
 
 	var (
-		username = session.Values["username"].(string)
+		matchID = mux.Vars(r)["id"]
 
-		v = mux.Vars(r)
+		done = make(chan int)
 	)
-
-	done := make(chan int)
 
 	s.doneWg.Add(1)
 	defer s.doneWg.Done()
@@ -159,23 +156,13 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 	srvDoneCh, srvDoneUUID := s.doneBroadcaster.Subscribe()
 	defer s.doneBroadcaster.Unsubscribe(srvDoneUUID)
 
-	mRuntime, err := s.guardRuntime(v["id"])
+	mRuntime, err := s.guardRuntime(matchID)
 	if err != nil {
-		logrus.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 
 		return
 	}
-	defer s.unguardRuntime(v["id"])
-
-	c, err := wsUpgrader.Upgrade(w, r, nil)
-	if err != nil {
-		logrus.Error(err)
-		w.WriteHeader(http.StatusInternalServerError)
-
-		return
-	}
-	defer c.Close()
+	defer s.unguardRuntime(matchID)
 
 	go func() {
 		for {
@@ -183,7 +170,7 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 			case <-done:
 				return
 			case <-srvDoneCh:
-				s.unguardRuntime(v["id"])
+				s.unguardRuntime(matchID)
 
 				s.doneBroadcaster.Unsubscribe(srvDoneUUID)
 				s.doneWg.Done()
@@ -199,72 +186,115 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 	notificationCh, notificationUUID := mRuntime.dealsChangesBroadcaster.Subscribe()
 	defer mRuntime.dealsChangesBroadcaster.Unsubscribe(notificationUUID)
 
-	var writeJSONMux sync.Mutex
-	writeJSON := func(v interface{}) error {
-		writeJSONMux.Lock()
-		defer writeJSONMux.Unlock()
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.WriteHeader(http.StatusOK)
 
-		return c.WriteJSON(v)
+	encoder := json.NewEncoder(w)
+
+	for {
+		v, ok := <-notificationCh
+		if !ok {
+			return
+		}
+
+		notifContainer := v.(protocol.NotificationContainer)
+
+		logrus.
+			WithField("type", "notification").
+			WithField("match", matchID).
+			Debug(notifContainer)
+
+		err := encoder.Encode(notifContainer)
+		if err != nil {
+			panic(err)
+		}
+
+		flusher.Flush()
+	}
+}
+
+func (s *Server) patchMatchHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := s.store.Sessions().Get(r, ServerName)
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
 	}
 
-	logCtx := logrus.
-		WithField("match", v["id"]).
-		WithField("player", username)
+	var (
+		username = session.Values["username"].(string)
+		matchID  = mux.Vars(r)["id"]
+
+		done = make(chan int)
+	)
+
+	s.doneWg.Add(1)
+	defer s.doneWg.Done()
+
+	srvDoneCh, srvDoneUUID := s.doneBroadcaster.Subscribe()
+	defer s.doneBroadcaster.Unsubscribe(srvDoneUUID)
+
+	mRuntime, err := s.guardRuntime(matchID)
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
+	defer s.unguardRuntime(matchID)
 
 	go func() {
 		for {
-			v, ok := <-notificationCh
-			if !ok {
+			select {
+			case <-done:
+				return
+			case <-srvDoneCh:
+				s.unguardRuntime(matchID)
+
+				s.doneBroadcaster.Unsubscribe(srvDoneUUID)
+				s.doneWg.Done()
+
 				return
 			}
-
-			notificationContainer := v.(protocol.NotificationContainer)
-
-			logCtx.
-				WithField("type", "notification").
-				Debug(notificationContainer)
-
-			writeJSON(notificationContainer)
 		}
 	}()
+	defer func() {
+		done <- 0
+	}()
 
-	for {
-		var requestContainer protocol.RequestContainer
+	logCtx := logrus.
+		WithField("match", matchID).
+		WithField("player", username)
 
-		if err := c.ReadJSON(&requestContainer); err != nil {
-			if writeJSON(protocol.ResponseContainer{Response: protocol.ResBadRequest, Body: body.New().Ko(err)}) != nil {
-				return
-			}
+	var reqContainer protocol.RequestContainer
+	if err = json.NewDecoder(r.Body).Decode(&reqContainer); err != nil {
+		response.WriteJSON(w, http.StatusBadRequest, body.New().Ko(err))
 
-			continue
-		}
-
-		trn := s.store.BeginTransaction()
-
-		requestContainer.Player, err = trn.PlayerRead(username)
-		if err != nil {
-			trn.Abort()
-
-			if writeJSON(protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}) != nil {
-				return
-			}
-
-			continue
-		}
-
-		logCtx.
-			WithField("type", "request").
-			Debug(requestContainer)
-
-		responseContainer := mRuntime.requestContainerHandler(trn, &requestContainer)
-		if !trn.Closed() {
-			panic("Transaction not closed")
-		}
-
-		logCtx.
-			WithField("type", "response").
-			Debug(responseContainer)
-
-		writeJSON(responseContainer)
+		return
 	}
+
+	trn := s.store.BeginTransaction()
+
+	reqContainer.Player, err = trn.PlayerRead(username)
+	if err != nil {
+		trn.Abort()
+
+		response.WriteJSON(w, http.StatusBadRequest, body.New().Ko(err))
+
+		return
+	}
+
+	logCtx.
+		WithField("type", "request").
+		Debug(reqContainer)
+
+	resContainer := mRuntime.reqContainerHandler(trn, &reqContainer)
+	if !trn.Closed() {
+		panic("Transaction not closed")
+	}
+
+	logCtx.
+		WithField("type", "response").
+		Debug(resContainer)
+
+	response.WriteJSON(w, http.StatusOK, resContainer)
 }
