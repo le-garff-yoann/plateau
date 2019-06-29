@@ -91,31 +91,6 @@ func (s *Server) readMatchHandler(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, http.StatusOK, match)
 }
 
-func (s *Server) getMatchConnectedPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
-	v := mux.Vars(r)
-
-	trn := s.store.BeginTransaction()
-	defer trn.Abort()
-
-	match, err := trn.MatchRead(v["id"])
-	if err != nil {
-		if _, ok := err.(store.DontExistError); ok {
-			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, v["id"])))
-		} else {
-			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
-		}
-
-		return
-	}
-
-	var names []string
-	for _, p := range match.ConnectedPlayers {
-		names = append(names, p.Name)
-	}
-
-	response.WriteJSON(w, http.StatusOK, names)
-}
-
 func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
 	v := mux.Vars(r)
 
@@ -184,30 +159,6 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 	srvDoneCh, srvDoneUUID := s.doneBroadcaster.Subscribe()
 	defer s.doneBroadcaster.Unsubscribe(srvDoneUUID)
 
-	trn := s.store.BeginTransaction()
-
-	err = trn.MatchConnectPlayer(v["id"], username)
-	trn.Commit()
-
-	if err != nil {
-		statusCode := http.StatusInternalServerError
-		if _, ok := err.(store.PlayerConnectionError); ok {
-			statusCode = http.StatusConflict
-		} else {
-			logrus.Error(err)
-		}
-
-		w.WriteHeader(statusCode)
-
-		return
-	}
-	defer func() {
-		trn := s.store.BeginTransaction()
-		defer trn.Commit()
-
-		trn.MatchDisconnectPlayer(v["id"], username)
-	}()
-
 	mRuntime, err := s.guardRuntime(v["id"])
 	if err != nil {
 		logrus.Error(err)
@@ -233,11 +184,6 @@ func (s *Server) connectMatchHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			case <-srvDoneCh:
 				s.unguardRuntime(v["id"])
-
-				trn := s.store.BeginTransaction()
-				defer trn.Commit()
-
-				trn.MatchDisconnectPlayer(v["id"], username)
 
 				s.doneBroadcaster.Unsubscribe(srvDoneUUID)
 				s.doneWg.Done()

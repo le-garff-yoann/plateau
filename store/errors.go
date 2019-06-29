@@ -14,13 +14,6 @@ func (s DontExistError) Error() string {
 	return string(s)
 }
 
-// PlayerConnectionError ...
-type PlayerConnectionError string
-
-func (s PlayerConnectionError) Error() string {
-	return string(s)
-}
-
 // PlayerParticipationError ...
 type PlayerParticipationError string
 

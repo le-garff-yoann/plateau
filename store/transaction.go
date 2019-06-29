@@ -24,8 +24,6 @@ type Transaction interface {
 	MatchCreate(protocol.Match) (id string, err error)
 	MatchRead(id string) (*protocol.Match, error)
 	MatchEndedAt(id string, val time.Time) error
-	MatchConnectPlayer(id, playerName string) error
-	MatchDisconnectPlayer(id, playerName string) error
 	MatchPlayerJoins(id, playerName string) error
 	MatchPlayerLeaves(id, playerName string) error
 	MatchCreateDeal(id string, deal protocol.Deal) error

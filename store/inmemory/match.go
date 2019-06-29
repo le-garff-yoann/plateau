@@ -16,8 +16,6 @@ type match struct {
 	CreatedAt time.Time
 	EndedAt   *time.Time
 
-	ConnectedPlayers map[string]protocol.Player
-
 	NumberOfPlayersRequired uint
 	Players                 map[string]protocol.Player
 
@@ -26,15 +24,10 @@ type match struct {
 
 func matchFromProtocolStruct(m *protocol.Match) *match {
 	var (
-		connectedplayers = make(map[string]protocol.Player)
-		players          = make(map[string]protocol.Player)
+		players = make(map[string]protocol.Player)
 
 		deals []deal
 	)
-
-	for _, p := range m.ConnectedPlayers {
-		connectedplayers[p.Name] = p
-	}
 
 	for _, p := range m.Players {
 		players[p.Name] = p
@@ -48,7 +41,6 @@ func matchFromProtocolStruct(m *protocol.Match) *match {
 		ID:                      m.ID,
 		CreatedAt:               m.CreatedAt,
 		EndedAt:                 m.EndedAt,
-		ConnectedPlayers:        connectedplayers,
 		NumberOfPlayersRequired: m.NumberOfPlayersRequired,
 		Players:                 players,
 		Deals:                   deals,
@@ -57,7 +49,7 @@ func matchFromProtocolStruct(m *protocol.Match) *match {
 
 func (s *match) toProtocolStruct(pPlayers []*protocol.Player) *protocol.Match {
 	var (
-		connectedplayers, players []protocol.Player
+		players []protocol.Player
 
 		pPlayersMap = make(map[string]protocol.Player)
 
@@ -66,15 +58,6 @@ func (s *match) toProtocolStruct(pPlayers []*protocol.Player) *protocol.Match {
 
 	for _, p := range pPlayers {
 		pPlayersMap[p.Name] = *p
-	}
-
-	for pName, p := range s.ConnectedPlayers {
-		pp, ok := pPlayersMap[pName]
-		if ok {
-			connectedplayers = append(connectedplayers, pp)
-		} else {
-			connectedplayers = append(connectedplayers, p)
-		}
 	}
 
 	for pName, p := range s.Players {
@@ -94,7 +77,6 @@ func (s *match) toProtocolStruct(pPlayers []*protocol.Player) *protocol.Match {
 		ID:                      s.ID,
 		CreatedAt:               s.CreatedAt,
 		EndedAt:                 s.EndedAt,
-		ConnectedPlayers:        connectedplayers,
 		NumberOfPlayersRequired: s.NumberOfPlayersRequired,
 		Players:                 players,
 		Deals:                   deals,
@@ -223,43 +205,6 @@ func (s *Transaction) MatchAddMessageToCurrentDeal(id string, message protocol.M
 		Old: oldDeal.toProtocolStruct(s.inMemoryCopy.Players),
 		New: deal.toProtocolStruct(s.inMemoryCopy.Players),
 	}) // TODO-1
-
-	return nil
-}
-
-// MatchConnectPlayer ...
-func (s *Transaction) MatchConnectPlayer(id, name string) (err error) {
-	defer func() {
-		s.errors = append(s.errors, err)
-	}()
-
-	m := s.inMemoryCopy.match(id)
-	if m == nil {
-		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
-	}
-
-	_, ok := m.ConnectedPlayers[name]
-	if ok {
-		return store.PlayerConnectionError(fmt.Sprintf(`The player "%s" is already connected to the match "%s"`, name, id))
-	}
-
-	m.ConnectedPlayers[name] = protocol.Player{Name: name}
-
-	return nil
-}
-
-// MatchDisconnectPlayer ...
-func (s *Transaction) MatchDisconnectPlayer(id, name string) (err error) {
-	defer func() {
-		s.errors = append(s.errors, err)
-	}()
-
-	m := s.inMemoryCopy.match(id)
-	if m == nil {
-		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
-	}
-
-	delete(m.ConnectedPlayers, name)
 
 	return nil
 }

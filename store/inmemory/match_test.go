@@ -135,43 +135,6 @@ func TestMatchUpdateCurrentDealHolder(t *testing.T) {
 		trn.MatchEndedAt(fmt.Sprintf("%s0", id), time.Now()))
 }
 
-func TestMatchConnectPlayer(t *testing.T) {
-	t.Parallel()
-
-	s := &Store{}
-	s.Open()
-
-	trn := s.BeginTransaction()
-
-	id, _ := trn.MatchCreate(protocol.Match{})
-
-	require.NoError(t, trn.MatchConnectPlayer(id, "foo"))
-
-	m, _ := trn.MatchRead(id)
-	require.Equal(t, "foo", m.ConnectedPlayers[0].Name)
-
-	require.IsType(t, store.PlayerConnectionError(""),
-		trn.MatchConnectPlayer(id, "foo"))
-}
-
-func TestMatchDisconnectPlayer(t *testing.T) {
-	t.Parallel()
-
-	s := &Store{}
-	s.Open()
-
-	trn := s.BeginTransaction()
-
-	id, _ := trn.MatchCreate(protocol.Match{})
-
-	trn.MatchConnectPlayer(id, "foo")
-
-	require.NoError(t, trn.MatchDisconnectPlayer(id, "foo"))
-
-	m, _ := trn.MatchRead(id)
-	require.Empty(t, m.ConnectedPlayers)
-}
-
 func TestMatchPlayerJoins(t *testing.T) {
 	t.Parallel()
 

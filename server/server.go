@@ -73,10 +73,6 @@ func New(listener, listenerStaticDir string, gm Game, str store.Store) (*Server,
 		HandlerFunc(s.getPlayersNameHandler).
 		Name("getPlayersName")
 	ar.
-		PathPrefix("/matchs/{id}/connected-players").
-		HandlerFunc(s.getMatchConnectedPlayersNameHandler).
-		Name("getMatchConnectedPlayersName")
-	ar.
 		PathPrefix("/matchs/{id}/players").
 		HandlerFunc(s.getMatchPlayersNameHandler).
 		Name("getMatchPlayersName")

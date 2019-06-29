@@ -11,8 +11,6 @@ type Match struct {
 	CreatedAt time.Time  `json:"created_at"`
 	EndedAt   *time.Time `json:"ended_at"`
 
-	ConnectedPlayers []Player `json:"-"`
-
 	NumberOfPlayersRequired uint     `json:"number_of_players_required"`
 	Players                 []Player `json:"-"`
 
