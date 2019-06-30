@@ -67,6 +67,17 @@ curl -b $COOKIE_FILE -X PATCH $BASE/api/matchs/$match_id \
     -d '{"request":"?"}'
 ```
 
+## Test a 2-player game in a shell (t2pg)
+
+```bash
+. t2pg.bash
+
+t2pg_setupmatch P1 P2
+
+t2pg_send P1 ? # t2pg_send P1 PLAY_ROCK
+t2pg_send P2 ? # t2pg_send P1 PLAY_PAPER
+```
+
 ## Frontend
 
 Take a look [here](vue/plateau/).
