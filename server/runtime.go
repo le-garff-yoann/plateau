@@ -6,49 +6,45 @@ import (
 	"plateau/protocol"
 	"plateau/server/response/body"
 	"plateau/store"
-	"sync"
 
 	"github.com/thoas/go-funk"
 )
 
-func (s *Server) guardRuntime(matchID string) (*MatchRuntime, error) {
+func (s *Server) guardRuntime(matchID string) (*matchRuntime, error) {
+	s.matchmatchRuntimesMux.Lock()
+	defer s.matchmatchRuntimesMux.Unlock()
+
 	if _, ok := s.matchRuntimes[matchID]; !ok {
 		iterator, err := s.store.CreateDealsChangeIterator(matchID)
 		if err != nil {
 			return nil, err
 		}
 
-		s.matchmatchRuntimesMux.Lock()
-		defer s.matchmatchRuntimesMux.Unlock()
-		s.matchRuntimes[matchID] = &MatchRuntime{
+		mRuntime := &matchRuntime{
 			game:                    s.game,
 			matchID:                 matchID,
-			dealsChanges:            []store.DealChange{},
 			dealsChangesBroadcaster: broadcaster.New(),
-			done:                    make(chan int),
+			done: make(chan int),
 		}
 
-		go s.matchRuntimes[matchID].dealsChangesBroadcaster.Run()
+		s.matchRuntimes[matchID] = mRuntime
+
+		go mRuntime.dealsChangesBroadcaster.Run()
 
 		go func() {
 			var dealChange store.DealChange
 
 			for iterator.Next(&dealChange) {
-				func(r *MatchRuntime) {
-					r.dealsChangesMux.Lock()
-					defer r.dealsChangesMux.Unlock()
-
-					r.dealsChanges = append(r.dealsChanges, dealChange)
-
+				func(r *matchRuntime) {
 					r.dealsChangesBroadcaster.Submit(protocol.NotificationContainer{
 						Notification: protocol.NDealChange,
 						Body:         dealChange,
 					})
-				}(s.matchRuntimes[matchID])
+				}(mRuntime)
 			}
 		}()
 
-		go func(r *MatchRuntime) {
+		go func(r *matchRuntime) {
 			<-r.done
 
 			r.dealsChangesBroadcaster.Done()
@@ -56,7 +52,7 @@ func (s *Server) guardRuntime(matchID string) (*MatchRuntime, error) {
 			if iterator.Close() == nil {
 				return
 			}
-		}(s.matchRuntimes[matchID])
+		}(mRuntime)
 	}
 
 	s.matchRuntimes[matchID].guard++
@@ -65,12 +61,11 @@ func (s *Server) guardRuntime(matchID string) (*MatchRuntime, error) {
 }
 
 func (s *Server) unguardRuntime(matchID string) bool {
+	s.matchmatchRuntimesMux.Lock()
+	defer s.matchmatchRuntimesMux.Unlock()
+
 	r, ok := s.matchRuntimes[matchID]
-
 	if ok {
-		s.matchmatchRuntimesMux.Lock()
-		defer s.matchmatchRuntimesMux.Unlock()
-
 		r.guard--
 		if r.guard == 0 {
 			s.matchRuntimes[matchID].done <- 0
@@ -82,29 +77,18 @@ func (s *Server) unguardRuntime(matchID string) bool {
 	return ok
 }
 
-// MatchRuntime ...
-type MatchRuntime struct {
+type matchRuntime struct {
 	game Game
 
 	matchID string
 	guard   int
 
-	dealsChangesMux         sync.RWMutex
-	dealsChanges            []store.DealChange
 	dealsChangesBroadcaster *broadcaster.Broadcaster
 
 	done chan int
 }
 
-// DealsChanges ...
-func (s *MatchRuntime) DealsChanges() []store.DealChange {
-	s.dealsChangesMux.RLock()
-	defer s.dealsChangesMux.RUnlock()
-
-	return s.dealsChanges
-}
-
-func (s *MatchRuntime) reqContainerHandler(trn store.Transaction, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
+func (s *matchRuntime) reqContainerHandler(trn store.Transaction, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
 	match, err := trn.MatchRead(s.matchID)
 	if err != nil {
 		trn.Abort()
@@ -114,14 +98,14 @@ func (s *MatchRuntime) reqContainerHandler(trn store.Transaction, reqContainer *
 
 	reqContainer.Match = match
 
-	ctx := baseContext(reqContainer)
+	ctx := baseContext(trn, reqContainer)
 
 	if reqContainer.Match.EndedAt == nil {
 		for _, deal := range reqContainer.Match.Deals {
 			if deal.FindByMessageCode(protocol.MPlayerWantToStartTheGame) != nil && deal.FindByMessageCode(protocol.MDealCompleted) != nil {
-				return baseContext(reqContainer).Complete(
-					s.game.Context(s, trn, reqContainer),
-				).handle(s, reqContainer)
+				return baseContext(trn, reqContainer).Complete(
+					s.game.Context(trn, reqContainer),
+				).handle(reqContainer)
 			}
 		}
 
@@ -140,25 +124,27 @@ func (s *MatchRuntime) reqContainerHandler(trn store.Transaction, reqContainer *
 		}
 	}
 
-	trn.Commit()
-
-	return ctx.handle(s, reqContainer)
+	return ctx.handle(reqContainer)
 }
 
-func baseContext(reqContainer *protocol.RequestContainer) *Context {
+func baseContext(trn store.Transaction, reqContainer *protocol.RequestContainer) *Context {
 	ctx := NewContext()
 	ctx.
-		On(protocol.ReqGetCurrentDeal, func(matchRuntime *MatchRuntime, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
-			return &protocol.ResponseContainer{
-				Response: protocol.ResOK,
-				Body:     protocol.IndexDeals(reqContainer.Match.Deals, 0),
-			}
+		OnNotImplemented(func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
+			trn.Commit()
+
+			return &protocol.ResponseContainer{Response: protocol.ResNotImplemented}
 		}).
-		On(protocol.ReqListRequests, func(matchRuntime *MatchRuntime, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
+		On(protocol.ReqListRequests, func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
 			return &protocol.ResponseContainer{
 				Response: protocol.ResOK,
 				Body:     ctx.Requests(),
 			}
+		}).
+		After(func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
+			trn.Commit()
+
+			return nil
 		})
 
 	return ctx
@@ -166,8 +152,8 @@ func baseContext(reqContainer *protocol.RequestContainer) *Context {
 
 func joinContext(trn store.Transaction, reqContainer *protocol.RequestContainer) *Context {
 	return NewContext().
-		On(protocol.ReqPlayerWantToJoin, func(matchRuntime *MatchRuntime, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
-			if err := trn.MatchPlayerJoins(matchRuntime.matchID, reqContainer.Player.Name); err != nil {
+		On(protocol.ReqPlayerWantToJoin, func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
+			if err := trn.MatchPlayerJoins(reqContainer.Match.ID, reqContainer.Player.Name); err != nil {
 				defer trn.Abort()
 
 				if _, ok := err.(store.PlayerParticipationError); ok {
@@ -183,8 +169,8 @@ func joinContext(trn store.Transaction, reqContainer *protocol.RequestContainer)
 
 func leaveContext(trn store.Transaction, reqContainer *protocol.RequestContainer) *Context {
 	return NewContext().
-		On(protocol.ReqPlayerWantToLeave, func(matchRuntime *MatchRuntime, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
-			if err := trn.MatchPlayerLeaves(matchRuntime.matchID, reqContainer.Player.Name); err != nil {
+		On(protocol.ReqPlayerWantToLeave, func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
+			if err := trn.MatchPlayerLeaves(reqContainer.Match.ID, reqContainer.Player.Name); err != nil {
 				defer trn.Abort()
 
 				if _, ok := err.(store.PlayerParticipationError); ok {
@@ -200,7 +186,7 @@ func leaveContext(trn store.Transaction, reqContainer *protocol.RequestContainer
 
 func wantToStartMatchContext(trn store.Transaction, reqContainer *protocol.RequestContainer) *Context {
 	return NewContext().
-		On(protocol.ReqPlayerWantToStartTheGame, func(matchRuntime *MatchRuntime, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
+		On(protocol.ReqPlayerWantToStartTheGame, func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
 			if !reqContainer.Match.IsFull() {
 				return &protocol.ResponseContainer{
 					Response: protocol.ResForbidden,
@@ -208,7 +194,7 @@ func wantToStartMatchContext(trn store.Transaction, reqContainer *protocol.Reque
 				}
 			}
 
-			if err := trn.MatchCreateDeal(matchRuntime.matchID, protocol.Deal{Holder: *reqContainer.Player, Messages: []protocol.Message{protocol.Message{MessageCode: protocol.MPlayerWantToStartTheGame}}}); err != nil {
+			if err := trn.MatchCreateDeal(reqContainer.Match.ID, protocol.Deal{Holder: *reqContainer.Player, Messages: []protocol.Message{protocol.Message{MessageCode: protocol.MPlayerWantToStartTheGame}}}); err != nil {
 				trn.Abort()
 
 				return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}
@@ -220,14 +206,14 @@ func wantToStartMatchContext(trn store.Transaction, reqContainer *protocol.Reque
 
 func askToStartMatchContext(trn store.Transaction, reqContainer *protocol.RequestContainer) *Context {
 	return NewContext().
-		On(protocol.ReqPlayerAccepts, func(matchRuntime *MatchRuntime, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
-			if err := trn.MatchAddMessageToCurrentDeal(matchRuntime.matchID, protocol.Message{MessageCode: protocol.MPlayerAccepts, Payload: reqContainer.Player.Name}); err != nil {
+		On(protocol.ReqPlayerAccepts, func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
+			if err := trn.MatchAddMessageToCurrentDeal(reqContainer.Match.ID, protocol.Message{MessageCode: protocol.MPlayerAccepts, Payload: reqContainer.Player.Name}); err != nil {
 				trn.Abort()
 
 				return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}
 			}
 
-			match, err := trn.MatchRead(matchRuntime.matchID)
+			match, err := trn.MatchRead(reqContainer.Match.ID)
 			if err != nil {
 				trn.Abort()
 
@@ -241,7 +227,7 @@ func askToStartMatchContext(trn store.Transaction, reqContainer *protocol.Reques
 
 			for _, player := range match.Players {
 				if !funk.Contains(OKPlayersName, player.Name) {
-					if err := trn.MatchUpdateCurrentDealHolder(matchRuntime.matchID, player.Name); err != nil {
+					if err := trn.MatchUpdateCurrentDealHolder(reqContainer.Match.ID, player.Name); err != nil {
 						trn.Abort()
 
 						return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}
@@ -251,7 +237,7 @@ func askToStartMatchContext(trn store.Transaction, reqContainer *protocol.Reques
 				}
 			}
 
-			if err := trn.MatchAddMessageToCurrentDeal(matchRuntime.matchID, protocol.Message{MessageCode: protocol.MDealCompleted}); err != nil {
+			if err := trn.MatchAddMessageToCurrentDeal(reqContainer.Match.ID, protocol.Message{MessageCode: protocol.MDealCompleted}); err != nil {
 				trn.Abort()
 
 				return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}
@@ -259,8 +245,8 @@ func askToStartMatchContext(trn store.Transaction, reqContainer *protocol.Reques
 
 			return &protocol.ResponseContainer{Response: protocol.ResOK}
 		}).
-		On(protocol.ReqPlayerRefuses, func(matchRuntime *MatchRuntime, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
-			if err := trn.MatchAddMessageToCurrentDeal(matchRuntime.matchID, protocol.Message{MessageCode: protocol.MDealAborded}); err != nil {
+		On(protocol.ReqPlayerRefuses, func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
+			if err := trn.MatchAddMessageToCurrentDeal(reqContainer.Match.ID, protocol.Message{MessageCode: protocol.MDealAborded}); err != nil {
 				trn.Abort()
 
 				return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}

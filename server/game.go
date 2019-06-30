@@ -19,7 +19,7 @@ type Game interface {
 	MinPlayers() (minPlayers uint)
 	MaxPlayers() (maxPlayers uint)
 
-	Context(*MatchRuntime, store.Transaction, *protocol.RequestContainer) *Context
+	Context(store.Transaction, *protocol.RequestContainer) *Context
 }
 
 func (s *Server) getGameDefinitionHandler(w http.ResponseWriter, r *http.Request) {

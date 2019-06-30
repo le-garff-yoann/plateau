@@ -3,8 +3,6 @@ package rockpaperscissors
 import (
 	"fmt"
 	"plateau/protocol"
-	"plateau/server"
-	"plateau/store"
 )
 
 // Game ...
@@ -16,6 +14,8 @@ type Game struct {
 // Init implements `server.Game` interface.
 func (s *Game) Init() error {
 	s.name = "rock–paper–scissors"
+
+	s.description = "https://en.wikipedia.org/wiki/Rock-paper-scissors"
 
 	s.minPlayers = 2
 	s.maxPlayers = 2
@@ -50,11 +50,4 @@ func (s *Game) MinPlayers() uint {
 // MaxPlayers implements `server.Game` interface.
 func (s *Game) MaxPlayers() uint {
 	return s.maxPlayers
-}
-
-// Context implements `server.Game` interface.
-func (s *Game) Context(matchRuntime *server.MatchRuntime, trn store.Transaction, reqContainer *protocol.RequestContainer) *server.Context {
-	trn.Commit()
-
-	return server.NewContext()
 }

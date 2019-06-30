@@ -7,6 +7,8 @@ import (
 )
 
 func TestPlayerString(t *testing.T) {
+	t.Parallel()
+
 	player := Player{Name: "foo"}
 
 	require.Equal(t, player.Name, player.String())

@@ -1,7 +1,10 @@
 package protocol
 
 import (
+	"math/rand"
 	"time"
+
+	"github.com/thoas/go-funk"
 )
 
 // Match ...
@@ -24,4 +27,25 @@ func (s *Match) String() string {
 // IsFull ...
 func (s *Match) IsFull() bool {
 	return int(s.NumberOfPlayersRequired) == len(s.Players)
+}
+
+// NextPLayer ...
+func (s *Match) NextPLayer(p Player) *Player {
+	i := funk.IndexOf(s.Players, p)
+	if i == -1 {
+		return nil
+	}
+
+	if i == len(s.Players)-1 {
+		return &s.Players[0]
+	}
+
+	return &s.Players[i+1]
+}
+
+// RandomPlayer ...
+func (s *Match) RandomPlayer() *Player {
+	rand.Seed(time.Now().Unix())
+
+	return &s.Players[rand.Intn(len(s.Players))]
 }

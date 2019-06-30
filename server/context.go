@@ -6,12 +6,17 @@ import (
 
 // NewContext ...
 func NewContext() *Context {
-	return (&Context{make(map[protocol.Request]func(*MatchRuntime, *protocol.RequestContainer) *protocol.ResponseContainer)})
+	return (&Context{
+		nil, nil, nil,
+		make(map[protocol.Request]func(*protocol.RequestContainer) *protocol.ResponseContainer),
+	})
 }
 
 // Context ...
 type Context struct {
-	handlers map[protocol.Request]func(*MatchRuntime, *protocol.RequestContainer) *protocol.ResponseContainer
+	beforeHandler                       func(*Context, *protocol.RequestContainer) *protocol.ResponseContainer
+	afterHandler, notImplementedHandler func(*protocol.RequestContainer) *protocol.ResponseContainer
+	handlers                            map[protocol.Request]func(*protocol.RequestContainer) *protocol.ResponseContainer
 }
 
 // Requests ...
@@ -23,25 +28,49 @@ func (s *Context) Requests() (requests []protocol.Request) {
 	return requests
 }
 
+// Before ...
+func (s *Context) Before(handlerFunc func(*Context, *protocol.RequestContainer) *protocol.ResponseContainer) *Context {
+	s.beforeHandler = handlerFunc
+
+	return s
+}
+
+// After ...
+func (s *Context) After(handlerFunc func(*protocol.RequestContainer) *protocol.ResponseContainer) *Context {
+	s.afterHandler = handlerFunc
+
+	return s
+}
+
+// OnNotImplemented ...
+func (s *Context) OnNotImplemented(handlerFunc func(*protocol.RequestContainer) *protocol.ResponseContainer) *Context {
+	s.notImplementedHandler = handlerFunc
+
+	return s
+}
+
 // On ...
-func (s *Context) On(request protocol.Request, handlerFunc func(*MatchRuntime, *protocol.RequestContainer) *protocol.ResponseContainer) *Context {
+func (s *Context) On(request protocol.Request, handlerFunc func(*protocol.RequestContainer) *protocol.ResponseContainer) *Context {
 	s.handlers[request] = handlerFunc
 
 	return s
 }
 
-// Delete ...
-func (s *Context) Delete(requests ...protocol.Request) *Context {
-	for _, r := range requests {
-		delete(s.handlers, r)
+// Complete ...
+func (s *Context) Complete(ctx *Context) *Context {
+	if ctx.beforeHandler != nil {
+		s.beforeHandler = ctx.beforeHandler
 	}
 
-	return s
-}
+	if ctx.afterHandler != nil {
+		s.afterHandler = ctx.afterHandler
+	}
 
-// Complete ...
-func (s *Context) Complete(context *Context) *Context {
-	for r, handlerFunc := range context.handlers {
+	if ctx.notImplementedHandler != nil {
+		s.notImplementedHandler = ctx.notImplementedHandler
+	}
+
+	for r, handlerFunc := range ctx.handlers {
 		_, ok := s.handlers[r]
 		if !ok {
 			s.On(r, handlerFunc)
@@ -51,11 +80,29 @@ func (s *Context) Complete(context *Context) *Context {
 	return s
 }
 
-func (s *Context) handle(matchRuntime *MatchRuntime, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
-	handlerFunc, ok := s.handlers[reqContainer.Request]
-	if ok {
-		return handlerFunc(matchRuntime, reqContainer)
+func (s *Context) handle(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
+	if s.beforeHandler != nil {
+		if res := s.beforeHandler(s, reqContainer); res != nil {
+			return res
+		}
 	}
 
-	return &protocol.ResponseContainer{Response: protocol.ResNotImplemented}
+	handlerFunc, ok := s.handlers[reqContainer.Request]
+	if ok {
+		res := handlerFunc(reqContainer)
+
+		if s.afterHandler != nil {
+			if afterRes := s.afterHandler(reqContainer); afterRes != nil {
+				res = afterRes
+			}
+		}
+
+		return res
+	}
+
+	if s.notImplementedHandler != nil {
+		return s.notImplementedHandler(reqContainer)
+	}
+
+	return nil
 }

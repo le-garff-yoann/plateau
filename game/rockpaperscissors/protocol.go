@@ -1,0 +1,19 @@
+package rockpaperscissors
+
+import "plateau/protocol"
+
+const (
+	// ReqRock ...
+	ReqRock protocol.Request = "PLAY_ROCK"
+	// ReqPaper ...
+	ReqPaper protocol.Request = "PLAY_PAPER"
+	// ReqScissors ...
+	ReqScissors protocol.Request = "PLAY_SCISSORS"
+
+	// MRock ...
+	MRock protocol.MessageCode = "ROCK"
+	// MPaper ...
+	MPaper protocol.MessageCode = "PAPER"
+	// MScissors ...
+	MScissors protocol.MessageCode = "SCISSORS"
+)

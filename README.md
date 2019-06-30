@@ -64,7 +64,7 @@ curl -b $COOKIE_FILE \
 
 # Read or modify the state of the match with an in-game request.
 curl -b $COOKIE_FILE -X PATCH $BASE/api/matchs/$match_id \
-    -d '{"request":"LIST_REQUESTS"}'
+    -d '{"request":"?"}'
 ```
 
 ## Frontend

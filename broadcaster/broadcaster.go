@@ -44,12 +44,11 @@ func (s *Broadcaster) Subscribe() (<-chan interface{}, uuid.UUID) {
 
 // Unsubscribe ...
 func (s *Broadcaster) Unsubscribe(uuid uuid.UUID) bool {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
 	_, ok := s.subscribers[uuid]
-
 	if ok {
-		s.mux.Lock()
-		defer s.mux.Unlock()
-
 		close(s.subscribers[uuid])
 		delete(s.subscribers, uuid)
 	}

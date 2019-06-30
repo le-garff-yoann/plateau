@@ -7,6 +7,8 @@ import (
 )
 
 func TestNotificationContainerString(t *testing.T) {
+	t.Parallel()
+
 	require.NotPanics(t, func() {
 		t.Log((&NotificationContainer{
 			Notification: NDealChange,

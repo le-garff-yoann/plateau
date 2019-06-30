@@ -17,7 +17,7 @@ type Server struct {
 	game Game
 
 	matchmatchRuntimesMux sync.Mutex
-	matchRuntimes         map[string]*MatchRuntime
+	matchRuntimes         map[string]*matchRuntime
 
 	store store.Store
 
@@ -43,7 +43,7 @@ func New(listener, listenerStaticDir string, gm Game, str store.Store) (*Server,
 
 	s := &Server{
 		game:          gm,
-		matchRuntimes: make(map[string]*MatchRuntime),
+		matchRuntimes: make(map[string]*matchRuntime),
 		store:         str,
 		router:        r,
 		httpServer: &http.Server{
