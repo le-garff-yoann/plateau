@@ -1,4 +1,4 @@
-_t_pl_req() {
+_t2pg_req() {
     [[ ! $(which curl jq) || -z $1 ]] && return 1 
 
     local \
@@ -21,31 +21,31 @@ _t_pl_req() {
     curl $BASE/api/matchs/$match_id$3 -b $COOKIE_FILE ${@:3} 2>/dev/null | jq .
 }
 
-t_pl_cleanup() {
+t2pg_cleanup() {
     [[ -z $1 ]] && return 1
 
     rm -f $1.out
 }
 
-t_pl_match() {
+t2pg_cleanup() {
     [[ -z $1 ]] && return 1
 
     _t_pl_req $1 "$2" ""
 }
 
-t_pl_deals() {
+t2pg_deals() {
     [[ -z $1 ]] && return 1
 
     _t_pl_req $1 "$2" /deals
 }
 
-t_pl_send() {
+t2pg_send() {
     [[ -z $1 ]] && return 1
 
     _t_pl_req $1 "$3" / -X PATCH -d "{\"request\":\"$2\"}"
 }
 
-t_pl_setupmatch() {
+tt2pg_setupmatch() {
     [[ -z $1 || -z $2 ]] && return 1 
 
     (
