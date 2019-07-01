@@ -25,6 +25,12 @@ t2pg_cleanup() {
     rm -f $1.cookie
 }
 
+t2pg_match() {
+    [[ -z $1 ]] && return 1
+
+    _t2pg_req $1 "$2" /
+}
+
 t2pg_deals() {
     [[ -z $1 ]] && return 1
 
