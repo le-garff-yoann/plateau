@@ -38,7 +38,7 @@ dist/plateau run -l :3000 --session-key my-STRONG-secret
 ```bash
 BASE=http://localhost:3000
 COOKIE_NAME=plateau
-COOKIE_FILE=me.out
+COOKIE_FILE=me.cookie
 USERINFO='{"username":"me","password":"1234"}'
 
 # Register yourself.

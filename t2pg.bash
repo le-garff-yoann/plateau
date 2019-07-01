@@ -4,7 +4,7 @@ _t2pg_req() {
     local \
         BASE=${2:-http://localhost:3000} \
         COOKIE_NAME=plateau \
-        COOKIE_FILE=$1.out \
+        COOKIE_FILE=$1.cookie \
         USERINFO="{\"username\":\"$1\",\"password\":\"$1\"}"
 
     curl $BASE/user/register -d $USERINFO &>/dev/null
@@ -24,7 +24,7 @@ _t2pg_req() {
 t2pg_cleanup() {
     [[ -z $1 ]] && return 1
 
-    rm -f $1.out
+    rm -f $1.cookie
 }
 
 t2pg_cleanup() {

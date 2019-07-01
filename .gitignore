@@ -16,6 +16,9 @@
 # Dependency directories (remove the comment below to include it).
 # vendor/
 
+# Applications temporary files.
+*.cookie
+
 # Vagrant.
 /Vagrantfile
 /.vagrant/
