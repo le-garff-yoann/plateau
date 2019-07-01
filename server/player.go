@@ -12,9 +12,10 @@ import (
 
 func (s *Server) getPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
 	trn := s.store.BeginTransaction()
-	defer trn.Abort()
 
 	names, err := trn.PlayerList()
+	trn.Abort()
+
 	if err != nil {
 		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
@@ -28,9 +29,10 @@ func (s *Server) readPlayerHandler(w http.ResponseWriter, r *http.Request) {
 	playerName := mux.Vars(r)["name"]
 
 	trn := s.store.BeginTransaction()
-	defer trn.Abort()
 
 	player, err := trn.PlayerRead(playerName)
+	trn.Abort()
+
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
 			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Player "%s" not found`, playerName)))

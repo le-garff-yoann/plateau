@@ -24,7 +24,7 @@ func (s *Server) guardRuntime(matchID string) (*matchRuntime, error) {
 			game:                    s.game,
 			matchID:                 matchID,
 			dealsChangesBroadcaster: broadcaster.New(),
-			done: make(chan int),
+			done:                    make(chan int),
 		}
 
 		s.matchRuntimes[matchID] = mRuntime
@@ -100,7 +100,7 @@ func (s *matchRuntime) reqContainerHandler(trn store.Transaction, reqContainer *
 
 	ctx := baseContext(trn, reqContainer)
 
-	if reqContainer.Match.EndedAt == nil {
+	if !reqContainer.Match.IsEnded() {
 		for _, deal := range reqContainer.Match.Deals {
 			if deal.FindByMessageCode(protocol.MPlayerWantToStartTheGame) != nil && deal.FindByMessageCode(protocol.MDealCompleted) != nil {
 				return baseContext(trn, reqContainer).Complete(
@@ -194,7 +194,7 @@ func wantToStartMatchContext(trn store.Transaction, reqContainer *protocol.Reque
 				}
 			}
 
-			if err := trn.MatchCreateDeal(reqContainer.Match.ID, protocol.Deal{Holder: *reqContainer.Player, Messages: []protocol.Message{protocol.Message{MessageCode: protocol.MPlayerWantToStartTheGame}}}); err != nil {
+			if err := trn.MatchCreateDeal(reqContainer.Match.ID, protocol.Deal{Holder: *reqContainer.Player, Messages: []protocol.Message{protocol.Message{Code: protocol.MPlayerWantToStartTheGame}}}); err != nil {
 				trn.Abort()
 
 				return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}
@@ -207,7 +207,7 @@ func wantToStartMatchContext(trn store.Transaction, reqContainer *protocol.Reque
 func askToStartMatchContext(trn store.Transaction, reqContainer *protocol.RequestContainer) *Context {
 	return NewContext().
 		On(protocol.ReqPlayerAccepts, func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
-			if err := trn.MatchAddMessageToCurrentDeal(reqContainer.Match.ID, protocol.Message{MessageCode: protocol.MPlayerAccepts, Payload: reqContainer.Player.Name}); err != nil {
+			if err := trn.MatchAddMessageToCurrentDeal(reqContainer.Match.ID, protocol.Message{Code: protocol.MPlayerAccepts, Payload: reqContainer.Player.Name}); err != nil {
 				trn.Abort()
 
 				return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}
@@ -237,7 +237,7 @@ func askToStartMatchContext(trn store.Transaction, reqContainer *protocol.Reques
 				}
 			}
 
-			if err := trn.MatchAddMessageToCurrentDeal(reqContainer.Match.ID, protocol.Message{MessageCode: protocol.MDealCompleted}); err != nil {
+			if err := trn.MatchAddMessageToCurrentDeal(reqContainer.Match.ID, protocol.Message{Code: protocol.MDealCompleted}); err != nil {
 				trn.Abort()
 
 				return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}
@@ -246,7 +246,7 @@ func askToStartMatchContext(trn store.Transaction, reqContainer *protocol.Reques
 			return &protocol.ResponseContainer{Response: protocol.ResOK}
 		}).
 		On(protocol.ReqPlayerRefuses, func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
-			if err := trn.MatchAddMessageToCurrentDeal(reqContainer.Match.ID, protocol.Message{MessageCode: protocol.MDealAborded}); err != nil {
+			if err := trn.MatchAddMessageToCurrentDeal(reqContainer.Match.ID, protocol.Message{Code: protocol.MDealAborded}); err != nil {
 				trn.Abort()
 
 				return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}

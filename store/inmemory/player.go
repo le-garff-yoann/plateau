@@ -11,7 +11,9 @@ import (
 // PlayerList ...
 func (s *Transaction) PlayerList() (names []string, err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	for _, p := range s.inMemoryCopy.Players {
@@ -24,7 +26,9 @@ func (s *Transaction) PlayerList() (names []string, err error) {
 // PlayerCreate ...
 func (s *Transaction) PlayerCreate(p protocol.Player) (err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	for _, player := range s.inMemoryCopy.Players {
@@ -41,7 +45,9 @@ func (s *Transaction) PlayerCreate(p protocol.Player) (err error) {
 // PlayerRead ...
 func (s *Transaction) PlayerRead(name string) (_ *protocol.Player, err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	p := s.inMemoryCopy.player(name)
@@ -58,7 +64,9 @@ func (s *Transaction) PlayerRead(name string) (_ *protocol.Player, err error) {
 // PlayerIncreaseWins ...
 func (s *Transaction) PlayerIncreaseWins(name string, increase uint) (err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	p := s.inMemoryCopy.player(name)
@@ -74,7 +82,9 @@ func (s *Transaction) PlayerIncreaseWins(name string, increase uint) (err error)
 // PlayerIncreaseLoses ...
 func (s *Transaction) PlayerIncreaseLoses(name string, increase uint) (err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	p := s.inMemoryCopy.player(name)
@@ -90,7 +100,9 @@ func (s *Transaction) PlayerIncreaseLoses(name string, increase uint) (err error
 // PlayerIncreaseTies ...
 func (s *Transaction) PlayerIncreaseTies(name string, increase uint) (err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	p := s.inMemoryCopy.player(name)

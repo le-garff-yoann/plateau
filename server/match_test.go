@@ -9,6 +9,7 @@ import (
 	"plateau/store/inmemory"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
@@ -17,7 +18,7 @@ import (
 func TestGetMatchIDsHandlerHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := New("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	h := http.Handler(srv.router.Get("getMatchIDs").GetHandler())
@@ -47,10 +48,7 @@ func TestGetMatchIDsHandlerHandler(t *testing.T) {
 	require.JSONEq(t, fmt.Sprintf(`["%s"]`, id), rr.Body.String())
 }
 
-func testCreateAndReadMatchHandler(t *testing.T) (*Server, *protocol.Match) {
-	srv, err := New("", "", &surrenderGame{}, &inmemory.Store{})
-	require.NoError(t, err)
-
+func testCreateAndReadMatchHandler(t *testing.T, srv *Server) *protocol.Match {
 	var (
 		createH = http.Handler(srv.router.Get("createMatch").GetHandler())
 		readH   = http.Handler(srv.router.Get("readMatch").GetHandler())
@@ -91,20 +89,99 @@ func testCreateAndReadMatchHandler(t *testing.T) (*Server, *protocol.Match) {
 
 	require.Equal(t, http.StatusOK, newRecorder(readH, req).Code)
 
-	return srv, &match
+	return &match
 }
 
 func TestCreateAndReadMatchHandler(t *testing.T) {
 	t.Parallel()
 
-	testCreateAndReadMatchHandler(t)
+	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	require.NoError(t, err)
+
+	testCreateAndReadMatchHandler(t, srv)
+}
+
+func TestMatchPlayersNameHandler(t *testing.T) {
+	t.Parallel()
+
+	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	require.NoError(t, err)
+
+	var (
+		h = http.Handler(srv.router.Get("getMatchPlayersName").GetHandler())
+
+		match  = testCreateAndReadMatchHandler(t, srv)
+		player = protocol.Player{Name: "foo", Password: "foo"}
+	)
+
+	testRegisterAndLoginHandlers(t, srv, player.Name, player.Password)
+
+	trn := srv.store.BeginTransaction()
+
+	trn.MatchPlayerJoins(match.ID, player.Name)
+	trn.Commit()
+
+	req, err := http.NewRequest("GET", "", nil)
+	require.NoError(t, err)
+
+	req = mux.SetURLVars(req, map[string]string{
+		"id": match.ID,
+	})
+
+	rr := httptest.NewRecorder()
+
+	h.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	require.JSONEq(t, fmt.Sprintf(`["%s"]`, player.Name), rr.Body.String())
+}
+
+func TestMatchDealsHandler(t *testing.T) {
+	t.Parallel()
+
+	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	require.NoError(t, err)
+
+	var (
+		h = http.Handler(srv.router.Get("getMatchDeals").GetHandler())
+
+		match  = testCreateAndReadMatchHandler(t, srv)
+		player = protocol.Player{Name: "foo", Password: "foo"}
+
+		trn = srv.store.BeginTransaction()
+	)
+
+	trn.MatchCreateDeal(match.ID, protocol.Deal{})
+	trn.Commit()
+
+	_, loginRecorder := testRegisterAndLoginHandlers(t, srv, player.Name, player.Password)
+
+	req, err := http.NewRequest("GET", "", nil)
+	require.NoError(t, err)
+
+	for _, c := range loginRecorder.Result().Cookies() {
+		req.AddCookie(c)
+	}
+
+	req = mux.SetURLVars(req, map[string]string{
+		"id": match.ID,
+	})
+
+	rr := httptest.NewRecorder()
+
+	h.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestStreamMatchNotificationsHandler(t *testing.T) {
 	t.Parallel()
 
-	// srv, match := testCreateAndReadMatchHandler(t)
-	srv, _ := testCreateAndReadMatchHandler(t)
+	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	require.NoError(t, err)
+
+	match := testCreateAndReadMatchHandler(t, srv)
+	_, loginRecorder := testRegisterAndLoginHandlers(t, srv, "foo", "bar")
 
 	// srv.Start()
 	// defer srv.Stop()
@@ -114,13 +191,32 @@ func TestStreamMatchNotificationsHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "", nil)
 	require.NoError(t, err)
 
-	rr := httptest.NewRecorder()
+	req = mux.SetURLVars(req, map[string]string{
+		"id": match.ID,
+	})
 
-	go h.ServeHTTP(rr, req)
+	newRecorder := func(async bool) *httptest.ResponseRecorder {
+		for _, c := range loginRecorder.Result().Cookies() {
+			req.AddCookie(c)
+		}
+
+		rr := httptest.NewRecorder()
+
+		if async {
+			go h.ServeHTTP(rr, req)
+		} else {
+			h.ServeHTTP(rr, req)
+		}
+
+		return rr
+	}
 
 	// FIXME: rr.Body does not "refresh" on flusher.Flush().
+	// TODO: Test if []protocol.Deals are "WithMessagesConcealed()".
 
 	// var (
+	// 	rr = newRecorder(true)
+
 	// 	hits = 0
 
 	// 	done = make(chan int)
@@ -166,19 +262,27 @@ func TestStreamMatchNotificationsHandler(t *testing.T) {
 
 	// <-done
 
-	require.Equal(t, http.StatusOK, rr.Code)
 	// require.Equal(t, 2, hits)
+
+	require.Equal(t, http.StatusOK, newRecorder(true).Code)
+
+	trn := srv.store.BeginTransaction()
+
+	trn.MatchEndedAt(match.ID, time.Now())
+	trn.Commit()
+
+	require.Equal(t, http.StatusGone, newRecorder(false).Code)
 }
 
 func TestPatchMatchHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, match := testCreateAndReadMatchHandler(t)
+	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	require.NoError(t, err)
+
+	match := testCreateAndReadMatchHandler(t, srv)
 
 	var (
-		registerH = http.Handler(srv.router.Get("registerUser").GetHandler())
-		loginH    = http.Handler(srv.router.Get("loginUser").GetHandler())
-
 		patchMatchtH = http.Handler(srv.router.Get("patchMatch").GetHandler())
 
 		players = map[string]protocol.Player{
@@ -189,24 +293,8 @@ func TestPatchMatchHandler(t *testing.T) {
 
 	cookies := make(map[string][]*http.Cookie)
 
-	newPlayerRecorder := func(h http.Handler, p *protocol.Player) *httptest.ResponseRecorder {
-		req, err := http.NewRequest("POST", "",
-			strings.NewReader(fmt.Sprintf(`{"username":"%s","password":"%s"}`, p.Name, p.Password)))
-		require.NoError(t, err)
-
-		rr := httptest.NewRecorder()
-
-		h.ServeHTTP(rr, req)
-
-		require.Equal(t, http.StatusCreated, rr.Code)
-
-		return rr
-	}
-
 	for _, p := range players {
-		newPlayerRecorder(registerH, &p)
-
-		rr := newPlayerRecorder(loginH, &p)
+		_, rr := testRegisterAndLoginHandlers(t, srv, p.Name, p.Password)
 
 		cookies[p.Name] = rr.Result().Cookies()
 	}

@@ -53,12 +53,17 @@ func (s *Game) Context(trn store.Transaction, reqContainer *protocol.RequestCont
 
 			if len(currentDeal.Messages) >= len(match.Players) {
 				var (
-					playerOneMessage = currentDeal.Find(func(msg protocol.Message) bool { return msg.Payload.(string) == match.Players[0].Name })
-					playerTwoMessage = currentDeal.Find(func(msg protocol.Message) bool { return msg.Payload.(string) == match.Players[1].Name })
+					playerAMessage = currentDeal.Find(func(msg protocol.Message) bool {
+						return msg.Payload.(protocol.MessageConcealedPayload).Data.(string) == match.Players[0].Name
+					})
+
+					playerBMessage = currentDeal.Find(func(msg protocol.Message) bool {
+						return msg.Payload.(protocol.MessageConcealedPayload).Data.(string) == match.Players[1].Name
+					})
 				)
 
-				if playerOneMessage.MessageCode == playerTwoMessage.MessageCode {
-					if err := trn.MatchAddMessageToCurrentDeal(match.ID, protocol.Message{MessageCode: protocol.MDealAborded}); err != nil {
+				if playerAMessage.Code == playerBMessage.Code {
+					if err := trn.MatchAddMessageToCurrentDeal(match.ID, protocol.Message{Code: protocol.MDealAborded}); err != nil {
 						trn.Abort()
 
 						return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}
@@ -66,15 +71,15 @@ func (s *Game) Context(trn store.Transaction, reqContainer *protocol.RequestCont
 				} else {
 					var winner, loser protocol.Player
 
-					if (playerOneMessage.MessageCode == MPaper && playerTwoMessage.MessageCode == MRock) ||
-						(playerOneMessage.MessageCode == MScissors && playerTwoMessage.MessageCode == MPaper) ||
-						(playerOneMessage.MessageCode == MRock && playerTwoMessage.MessageCode == MScissors) {
+					if (playerAMessage.Code == MPaper && playerBMessage.Code == MRock) ||
+						(playerAMessage.Code == MScissors && playerBMessage.Code == MPaper) ||
+						(playerAMessage.Code == MRock && playerBMessage.Code == MScissors) {
 						winner, loser = match.Players[0], match.Players[1]
 					} else {
 						winner, loser = match.Players[1], match.Players[0]
 					}
 
-					if err := trn.MatchAddMessageToCurrentDeal(match.ID, protocol.Message{MessageCode: protocol.MDealCompleted}); err != nil {
+					if err := trn.MatchAddMessageToCurrentDeal(match.ID, protocol.Message{Code: protocol.MDealCompleted}); err != nil {
 						trn.Abort()
 
 						return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}
@@ -108,15 +113,18 @@ func (s *Game) Context(trn store.Transaction, reqContainer *protocol.RequestCont
 func requestFunc(msg protocol.MessageCode, trn store.Transaction) func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
 	return func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
 		if err := trn.MatchAddMessageToCurrentDeal(reqContainer.Match.ID, protocol.Message{
-			MessageCode: msg,
-			Payload:     reqContainer.Player.Name,
+			Code: msg,
+			Payload: protocol.MessageConcealedPayload{
+				AllowedNamesCode: []string{reqContainer.Player.Name},
+				Data:             reqContainer.Player.Name,
+			},
 		}); err != nil {
 			trn.Abort()
 
 			return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}
 		}
 
-		if err := trn.MatchUpdateCurrentDealHolder(reqContainer.Match.ID, reqContainer.Match.NextPLayer(*reqContainer.Player).Name); err != nil {
+		if err := trn.MatchUpdateCurrentDealHolder(reqContainer.Match.ID, reqContainer.Match.NextPlayer(*reqContainer.Player).Name); err != nil {
 			trn.Abort()
 
 			return &protocol.ResponseContainer{Response: protocol.ResInternalError, Body: body.New().Ko(err)}

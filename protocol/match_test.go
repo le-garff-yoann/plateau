@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -24,6 +25,17 @@ func TestMatchIsFull(t *testing.T) {
 	require.True(t, match.IsFull())
 }
 
+func TestMatchIsEnded(t *testing.T) {
+	t.Parallel()
+
+	match := Match{}
+	require.False(t, match.IsEnded())
+
+	now := time.Now()
+	match.EndedAt = &now
+	require.True(t, match.IsEnded())
+}
+
 func TestNextPlayer(t *testing.T) {
 	t.Parallel()
 
@@ -32,9 +44,9 @@ func TestNextPlayer(t *testing.T) {
 		Player{Name: "bar"},
 	}}
 
-	require.Nil(t, match.NextPLayer(Player{Name: "baz"}))
-	require.Equal(t, "bar", match.NextPLayer(Player{Name: "foo"}).Name)
-	require.Equal(t, "foo", match.NextPLayer(Player{Name: "bar"}).Name)
+	require.Nil(t, match.NextPlayer(Player{Name: "baz"}))
+	require.Equal(t, "bar", match.NextPlayer(Player{Name: "foo"}).Name)
+	require.Equal(t, "foo", match.NextPlayer(Player{Name: "bar"}).Name)
 }
 
 func TestMatchRandomPlayer(t *testing.T) {

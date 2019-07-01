@@ -86,7 +86,9 @@ func (s *match) toProtocolStruct(pPlayers []*protocol.Player) *protocol.Match {
 // MatchList ...
 func (s *Transaction) MatchList() (IDs []string, err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	for _, m := range s.inMemoryCopy.Matchs {
@@ -99,7 +101,9 @@ func (s *Transaction) MatchList() (IDs []string, err error) {
 // MatchCreate ...
 func (s *Transaction) MatchCreate(m protocol.Match) (id string, err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	m.ID = uuid.NewV4().String()
@@ -112,7 +116,9 @@ func (s *Transaction) MatchCreate(m protocol.Match) (id string, err error) {
 // MatchRead ...
 func (s *Transaction) MatchRead(id string) (_ *protocol.Match, err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	m := s.inMemoryCopy.match(id)
@@ -129,7 +135,9 @@ func (s *Transaction) MatchRead(id string) (_ *protocol.Match, err error) {
 // MatchEndedAt ...
 func (s *Transaction) MatchEndedAt(id string, val time.Time) (err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	m := s.inMemoryCopy.match(id)
@@ -145,9 +153,10 @@ func (s *Transaction) MatchEndedAt(id string, val time.Time) (err error) {
 // MatchCreateDeal ...
 func (s *Transaction) MatchCreateDeal(id string, deal protocol.Deal) (err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
-
 	m := s.inMemoryCopy.match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
@@ -163,7 +172,9 @@ func (s *Transaction) MatchCreateDeal(id string, deal protocol.Deal) (err error)
 // MatchUpdateCurrentDealHolder ...
 func (s *Transaction) MatchUpdateCurrentDealHolder(id, newHolderName string) (err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	m := s.inMemoryCopy.match(id)
@@ -187,7 +198,9 @@ func (s *Transaction) MatchUpdateCurrentDealHolder(id, newHolderName string) (er
 // MatchAddMessageToCurrentDeal ...
 func (s *Transaction) MatchAddMessageToCurrentDeal(id string, message protocol.Message) (err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	m := s.inMemoryCopy.match(id)
@@ -212,7 +225,9 @@ func (s *Transaction) MatchAddMessageToCurrentDeal(id string, message protocol.M
 // MatchPlayerJoins ...
 func (s *Transaction) MatchPlayerJoins(id, name string) (err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	m := s.inMemoryCopy.match(id)
@@ -237,7 +252,9 @@ func (s *Transaction) MatchPlayerJoins(id, name string) (err error) {
 // MatchPlayerLeaves ...
 func (s *Transaction) MatchPlayerLeaves(id, name string) (err error) {
 	defer func() {
-		s.errors = append(s.errors, err)
+		if err != nil {
+			s.errors = append(s.errors, err)
+		}
 	}()
 
 	m := s.inMemoryCopy.match(id)

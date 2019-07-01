@@ -11,12 +11,14 @@ import (
 
 // TestMatchRuntime ...
 type TestMatchRuntime struct {
+	T *testing.T
+
 	Game
 
 	srv *Server
 
-	Match   protocol.Match
-	Players []protocol.Player
+	Match       protocol.Match
+	PlayersName []string
 
 	MatchRuntime *matchRuntime
 }
@@ -31,6 +33,17 @@ func (s *TestMatchRuntime) ReqContainerHandlerFunc() func(store.Transaction, *pr
 	return s.MatchRuntime.reqContainerHandler
 }
 
+// TestRequest ...
+func (s *TestMatchRuntime) TestRequest(playerName string, req protocol.Request, expectedRes protocol.Response) {
+	require.Equal(s.T, expectedRes, s.ReqContainerHandlerFunc()(
+		s.Store().BeginTransaction(),
+		&protocol.RequestContainer{
+			Request: req,
+			Player:  &protocol.Player{Name: playerName},
+		}).Response,
+	)
+}
+
 // Close ...
 func (s *TestMatchRuntime) Close() {
 	s.srv.unguardRuntime(s.Match.ID)
@@ -41,20 +54,16 @@ func (s *TestMatchRuntime) Close() {
 
 // SetupTestMatchRuntime ...
 func SetupTestMatchRuntime(t *testing.T, testMatchRuntime *TestMatchRuntime) {
-	testMatchRuntime.srv = &Server{
-		game:          testMatchRuntime.Game,
-		matchRuntimes: make(map[string]*matchRuntime),
-		store:         &inmemory.Store{},
-	}
-
-	testMatchRuntime.Store().Open()
+	var err error
+	testMatchRuntime.srv, err = New(testMatchRuntime.Game, &inmemory.Store{})
+	require.NoError(t, err)
 
 	trn := testMatchRuntime.Store().BeginTransaction()
 
 	id, _ := trn.MatchCreate(testMatchRuntime.Match)
 
-	for _, p := range testMatchRuntime.Players {
-		trn.PlayerCreate(p)
+	for _, pName := range testMatchRuntime.PlayersName {
+		trn.PlayerCreate(protocol.Player{Name: pName})
 	}
 
 	m, _ := trn.MatchRead(id)
@@ -62,8 +71,6 @@ func SetupTestMatchRuntime(t *testing.T, testMatchRuntime *TestMatchRuntime) {
 
 	trn.Commit()
 
-	var err error
 	testMatchRuntime.MatchRuntime, err = testMatchRuntime.srv.guardRuntime(id)
 	require.NoError(t, err)
-
 }

@@ -20,7 +20,7 @@ var (
 
 			logrus.Info("Starting the server....")
 
-			srv, err := server.New(
+			srv, err := server.Init(
 				serverListener, serverListenerStaticDir,
 				gm,
 				str,

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"plateau/store/inmemory"
@@ -36,20 +37,14 @@ func TestLoginCredentialsHashedPassword(t *testing.T) {
 	require.True(t, cred.VerifyHash(hPassword))
 }
 
-func TestLoginHandlers(t *testing.T) {
-	t.Parallel()
-
-	srv, err := New("", "", &surrenderGame{}, &inmemory.Store{})
-	require.NoError(t, err)
-
+func testRegisterAndLoginHandlers(t *testing.T, srv *Server, username, password string) (func(h http.Handler) *httptest.ResponseRecorder, *httptest.ResponseRecorder) {
 	var (
 		registerH = http.Handler(srv.router.Get("registerUser").GetHandler())
 		loginH    = http.Handler(srv.router.Get("loginUser").GetHandler())
-		logoutH   = http.Handler(srv.router.Get("logoutUser").GetHandler())
 	)
 
 	newRecorder := func(h http.Handler) *httptest.ResponseRecorder {
-		req, err := http.NewRequest("POST", "", strings.NewReader(`{"username":"foo","password":"bar"}`))
+		req, err := http.NewRequest("POST", "", strings.NewReader(fmt.Sprintf(`{"username":"%s","password":"%s"}`, username, password)))
 		require.NoError(t, err)
 
 		rr := httptest.NewRecorder()
@@ -62,6 +57,22 @@ func TestLoginHandlers(t *testing.T) {
 	require.Equal(t, http.StatusUnauthorized, newRecorder(loginH).Code)
 	require.Equal(t, http.StatusCreated, newRecorder(registerH).Code)
 	require.Equal(t, http.StatusConflict, newRecorder(registerH).Code)
-	require.Equal(t, http.StatusCreated, newRecorder(loginH).Code)
+
+	loginRecorder := newRecorder(loginH)
+	require.Equal(t, http.StatusCreated, loginRecorder.Code)
+
+	return newRecorder, loginRecorder
+}
+
+func TestRegisterLoginAndLogoutHandlers(t *testing.T) {
+	t.Parallel()
+
+	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	require.NoError(t, err)
+
+	newRecorder, _ := testRegisterAndLoginHandlers(t, srv, "foo", "bar")
+
+	logoutH := http.Handler(srv.router.Get("logoutUser").GetHandler())
+
 	require.Equal(t, http.StatusCreated, newRecorder(logoutH).Code)
 }

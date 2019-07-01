@@ -12,80 +12,23 @@ func TestGameRuntime(t *testing.T) {
 	t.Parallel()
 
 	testMatchRuntime := &server.TestMatchRuntime{
-		Game:  &Game{},
-		Match: protocol.Match{NumberOfPlayersRequired: 2},
-		Players: []protocol.Player{
-			protocol.Player{Name: "foo"},
-			protocol.Player{Name: "bar"},
-		},
+		T:           t,
+		Game:        &Game{},
+		Match:       protocol.Match{NumberOfPlayersRequired: 2},
+		PlayersName: []string{"foo", "bar"},
 	}
 
 	server.SetupTestMatchRuntime(t, testMatchRuntime)
 
-	require.Equal(t, protocol.ResOK, testMatchRuntime.ReqContainerHandlerFunc()(
-		testMatchRuntime.Store().BeginTransaction(),
-		&protocol.RequestContainer{
-			Request: protocol.ReqListRequests,
-			Player:  &testMatchRuntime.Players[0],
-		}).Response,
-	)
-
-	require.Equal(t, protocol.ResOK, testMatchRuntime.ReqContainerHandlerFunc()(
-		testMatchRuntime.Store().BeginTransaction(),
-		&protocol.RequestContainer{
-			Request: protocol.ReqPlayerWantToJoin,
-			Player:  &testMatchRuntime.Players[0],
-		}).Response,
-	)
-
-	require.Equal(t, protocol.ResForbidden, testMatchRuntime.ReqContainerHandlerFunc()(
-		testMatchRuntime.Store().BeginTransaction(),
-		&protocol.RequestContainer{
-			Request: protocol.ReqPlayerWantToStartTheGame,
-			Player:  &testMatchRuntime.Players[0],
-		}).Response,
-	)
-
-	require.Equal(t, protocol.ResOK, testMatchRuntime.ReqContainerHandlerFunc()(
-		testMatchRuntime.Store().BeginTransaction(),
-		&protocol.RequestContainer{
-			Request: protocol.ReqPlayerWantToJoin,
-			Player:  &testMatchRuntime.Players[1],
-		}).Response,
-	)
-
-	require.Equal(t, protocol.ResOK, testMatchRuntime.ReqContainerHandlerFunc()(
-		testMatchRuntime.Store().BeginTransaction(),
-		&protocol.RequestContainer{
-			Request: protocol.ReqPlayerWantToStartTheGame,
-			Player:  &testMatchRuntime.Players[0],
-		}).Response,
-	)
-
-	require.Equal(t, protocol.ResOK, testMatchRuntime.ReqContainerHandlerFunc()(
-		testMatchRuntime.Store().BeginTransaction(),
-		&protocol.RequestContainer{
-			Request: protocol.ReqPlayerAccepts,
-			Player:  &testMatchRuntime.Players[0],
-		}).Response,
-	)
-
-	require.Equal(t, protocol.ResOK, testMatchRuntime.ReqContainerHandlerFunc()(
-		testMatchRuntime.Store().BeginTransaction(),
-		&protocol.RequestContainer{
-			Request: protocol.ReqPlayerAccepts,
-			Player:  &testMatchRuntime.Players[1],
-		}).Response,
-	)
+	testMatchRuntime.TestRequest("foo", protocol.ReqPlayerWantToJoin, protocol.ResOK)
+	testMatchRuntime.TestRequest("bar", protocol.ReqPlayerWantToJoin, protocol.ResOK)
+	testMatchRuntime.TestRequest("foo", protocol.ReqPlayerWantToStartTheGame, protocol.ResOK)
+	testMatchRuntime.TestRequest("foo", protocol.ReqPlayerAccepts, protocol.ResOK)
+	testMatchRuntime.TestRequest("bar", protocol.ReqPlayerAccepts, protocol.ResOK)
 
 	fight := func(reqA, reqB protocol.Request) *protocol.Match {
 		// Force the creation of the first deal.
-		testMatchRuntime.ReqContainerHandlerFunc()(
-			testMatchRuntime.Store().BeginTransaction(),
-			&protocol.RequestContainer{
-				Request: protocol.ReqListRequests,
-				Player:  &testMatchRuntime.Players[0],
-			})
+		testMatchRuntime.TestRequest("foo", protocol.ReqListRequests, protocol.ResOK)
 
 		trn := testMatchRuntime.Store().BeginTransaction()
 
@@ -95,21 +38,17 @@ func TestGameRuntime(t *testing.T) {
 		initialHolder := protocol.IndexDeals(match.Deals, 0).Holder
 		require.NotNil(t, initialHolder)
 
-		require.Equal(t, protocol.ResOK, testMatchRuntime.ReqContainerHandlerFunc()(
-			testMatchRuntime.Store().BeginTransaction(),
-			&protocol.RequestContainer{
-				Request: reqA,
-				Player:  &initialHolder,
-			}).Response,
-		)
+		testMatchRuntime.TestRequest(initialHolder.Name, reqA, protocol.ResOK)
 
-		require.Equal(t, protocol.ResOK, testMatchRuntime.ReqContainerHandlerFunc()(
-			testMatchRuntime.Store().BeginTransaction(),
-			&protocol.RequestContainer{
-				Request: reqB,
-				Player:  match.NextPLayer(initialHolder),
-			}).Response,
-		)
+		trn = testMatchRuntime.Store().BeginTransaction()
+
+		match, _ = trn.MatchRead(testMatchRuntime.Match.ID)
+		trn.Abort()
+
+		currentDeal := protocol.IndexDeals(match.Deals, 0).WithMessagesConcealed(match.NextPlayer(initialHolder).Name)
+		require.Empty(t, currentDeal.Messages[len(currentDeal.Messages)-1].Code)
+
+		testMatchRuntime.TestRequest(match.NextPlayer(initialHolder).Name, reqB, protocol.ResOK)
 
 		trn = testMatchRuntime.Store().BeginTransaction()
 

@@ -29,7 +29,14 @@ type Server struct {
 }
 
 // New ...
-func New(listener, listenerStaticDir string, gm Game, str store.Store) (*Server, error) {
+func New(gm Game, str store.Store) (*Server, error) {
+	s := &Server{
+		game:            gm,
+		matchRuntimes:   make(map[string]*matchRuntime),
+		store:           str,
+		doneBroadcaster: broadcaster.New(),
+	}
+
 	if err := gm.Init(); err != nil {
 		return nil, err
 	}
@@ -38,20 +45,23 @@ func New(listener, listenerStaticDir string, gm Game, str store.Store) (*Server,
 		return nil, err
 	}
 
-	r := mux.NewRouter().StrictSlash(true)
-	ar := r.PathPrefix("/api").Subrouter()
+	return s, nil
+}
 
-	s := &Server{
-		game:          gm,
-		matchRuntimes: make(map[string]*matchRuntime),
-		store:         str,
-		router:        r,
-		httpServer: &http.Server{
-			Addr:    listener,
-			Handler: r,
-		},
-		doneBroadcaster: broadcaster.New(),
+// Init ...
+func Init(listener, listenerStaticDir string, gm Game, str store.Store) (*Server, error) {
+	s, err := New(gm, str)
+	if err != nil {
+
 	}
+
+	s.router = mux.NewRouter().StrictSlash(true)
+	s.httpServer = &http.Server{
+		Addr:    listener,
+		Handler: s.router,
+	}
+
+	ar := s.router.PathPrefix("/api").Subrouter()
 
 	ar.Use(s.loginMiddleware)
 	ar.
@@ -102,24 +112,24 @@ func New(listener, listenerStaticDir string, gm Game, str store.Store) (*Server,
 		HandlerFunc(s.createMatchHandler).
 		Name("createMatch")
 
-	r.
+	s.router.
 		PathPrefix("/user/register").
 		Methods("POST").
 		HandlerFunc(s.registerUserHandler).
 		Name("registerUser")
-	r.
+	s.router.
 		PathPrefix("/user/login").
 		Methods("POST").
 		HandlerFunc(s.loginUserHandler).
 		Name("loginUser")
-	r.
+	s.router.
 		PathPrefix("/user/logout").
 		Methods("DEL").
 		HandlerFunc(s.logoutUserHandler).
 		Name("logoutUser")
 
 	if listenerStaticDir != "" {
-		r.
+		s.router.
 			PathPrefix("/").
 			Methods("GET").
 			Handler(http.FileServer(http.Dir(listenerStaticDir))).

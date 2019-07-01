@@ -51,7 +51,5 @@ func (s *surrenderGame) MaxPlayers() uint {
 }
 
 func (s *surrenderGame) Context(trn store.Transaction, reqContainer *protocol.RequestContainer) *Context {
-	trn.Commit()
-
 	return NewContext()
 }

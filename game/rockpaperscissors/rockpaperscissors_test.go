@@ -27,6 +27,8 @@ func TestIsMatchValid(t *testing.T) {
 	g := Game{}
 	g.Init()
 
+	require.NoError(t, g.IsMatchValid(&protocol.Match{NumberOfPlayersRequired: 2}))
+
 	require.Error(t, g.IsMatchValid(&protocol.Match{}))
 
 	require.Error(t, g.IsMatchValid(&protocol.Match{NumberOfPlayersRequired: 0}))

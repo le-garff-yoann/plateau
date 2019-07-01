@@ -30,20 +30,34 @@ func (s *Deal) FindAll(cb func(Message) bool) []Message {
 // FindByMessageCode ...
 func (s *Deal) FindByMessageCode(messageCode MessageCode) *Message {
 	return s.Find(func(msg Message) bool {
-		return msg.MessageCode == messageCode
+		return msg.Code == messageCode
 	})
 }
 
 // FindAllByMessageCode ...
 func (s *Deal) FindAllByMessageCode(messageCode MessageCode) []Message {
 	return s.FindAll(func(msg Message) bool {
-		return msg.MessageCode == messageCode
+		return msg.Code == messageCode
 	})
 }
 
 // IsActive ...
 func (s *Deal) IsActive() bool {
 	return s.FindByMessageCode(MDealCompleted) == nil && s.FindByMessageCode(MDealAborded) == nil
+}
+
+// WithMessagesConcealed ...
+func (s *Deal) WithMessagesConcealed(playerName ...string) *Deal {
+	deal := Deal{
+		Holder:   s.Holder,
+		Messages: []Message{},
+	}
+
+	for _, msg := range s.Messages {
+		deal.Messages = append(deal.Messages, *msg.Concealed(playerName...))
+	}
+
+	return &deal
 }
 
 // IndexDeals ...

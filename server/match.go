@@ -19,7 +19,7 @@ func (s *Server) getMatchIDsHandler(w http.ResponseWriter, r *http.Request) {
 	trn := s.store.BeginTransaction()
 
 	IDs, err := trn.MatchList()
-	defer trn.Abort()
+	trn.Abort()
 
 	if err != nil {
 		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
@@ -75,9 +75,10 @@ func (s *Server) readMatchHandler(w http.ResponseWriter, r *http.Request) {
 	matchID := mux.Vars(r)["id"]
 
 	trn := s.store.BeginTransaction()
-	defer trn.Abort()
 
 	match, err := trn.MatchRead(matchID)
+	trn.Abort()
+
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
 			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, matchID)))
@@ -95,9 +96,10 @@ func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Reque
 	matchID := mux.Vars(r)["id"]
 
 	trn := s.store.BeginTransaction()
-	defer trn.Abort()
 
 	match, err := trn.MatchRead(matchID)
+	trn.Abort()
+
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
 			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, matchID)))
@@ -117,12 +119,15 @@ func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) getMatchDealsHandler(w http.ResponseWriter, r *http.Request) {
-	matchID := mux.Vars(r)["id"]
+	var (
+		trn = s.store.BeginTransaction()
 
-	trn := s.store.BeginTransaction()
-	defer trn.Abort()
+		matchID = mux.Vars(r)["id"]
+	)
 
 	match, err := trn.MatchRead(matchID)
+	trn.Abort()
+
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
 			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, matchID)))
@@ -133,7 +138,24 @@ func (s *Server) getMatchDealsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, match.Deals)
+	var playerName []string
+	if !match.IsEnded() {
+		session, err := s.store.Sessions().Get(r, ServerName)
+		if err != nil {
+			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+			return
+		}
+
+		playerName = append(playerName, session.Values["username"].(string))
+	}
+
+	var deals []protocol.Deal
+	for _, d := range match.Deals {
+		deals = append(deals, *d.WithMessagesConcealed(playerName...))
+	}
+
+	response.WriteJSON(w, http.StatusOK, deals)
 }
 
 func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.Request) {
@@ -144,11 +166,40 @@ func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var (
-		matchID = mux.Vars(r)["id"]
+	session, err := s.store.Sessions().Get(r, ServerName)
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
-		done = make(chan int)
+		return
+	}
+
+	var (
+		username = session.Values["username"].(string)
+		matchID  = mux.Vars(r)["id"]
+
+		trn = s.store.BeginTransaction()
 	)
+
+	match, err := trn.MatchRead(matchID)
+	trn.Abort()
+
+	if err != nil {
+		if _, ok := err.(store.DontExistError); ok {
+			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, matchID)))
+		} else {
+			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+		}
+
+		return
+	}
+
+	if match.EndedAt != nil {
+		response.WriteJSON(w, http.StatusGone, body.New().Ko(fmt.Errorf(`Match "%s" is ended`, match.ID)))
+
+		return
+	}
+
+	done := make(chan int)
 
 	s.doneWg.Add(1)
 	defer s.doneWg.Done()
@@ -156,13 +207,13 @@ func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.
 	srvDoneCh, srvDoneUUID := s.doneBroadcaster.Subscribe()
 	defer s.doneBroadcaster.Unsubscribe(srvDoneUUID)
 
-	mRuntime, err := s.guardRuntime(matchID)
+	mRuntime, err := s.guardRuntime(match.ID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 
 		return
 	}
-	defer s.unguardRuntime(matchID)
+	defer s.unguardRuntime(match.ID)
 
 	go func() {
 		for {
@@ -170,7 +221,7 @@ func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.
 			case <-done:
 				return
 			case <-srvDoneCh:
-				s.unguardRuntime(matchID)
+				s.unguardRuntime(match.ID)
 
 				s.doneBroadcaster.Unsubscribe(srvDoneUUID)
 				s.doneWg.Done()
@@ -201,8 +252,14 @@ func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.
 
 		logrus.
 			WithField("type", "notification").
-			WithField("match", matchID).
+			WithField("match", match.ID).
 			Debug(notifContainer)
+
+		if notifContainer.Notification == protocol.NDealChange {
+			dealChange := notifContainer.Body.(store.DealChange)
+
+			dealChange.New.WithMessagesConcealed(username)
+		}
 
 		err := encoder.Encode(notifContainer)
 		if err != nil {

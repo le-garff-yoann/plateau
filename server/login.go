@@ -105,9 +105,10 @@ func (s *Server) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	trn := s.store.BeginTransaction()
-	defer trn.Abort()
 
 	player, err := trn.PlayerRead(cred.Username)
+	trn.Abort()
+
 	if err != nil {
 		httpCode := http.StatusInternalServerError
 		if _, ok := err.(store.DontExistError); ok {

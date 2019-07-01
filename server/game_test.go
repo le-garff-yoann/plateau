@@ -13,7 +13,7 @@ import (
 func TestGetGameDefinitionHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := New("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	h := http.Handler(srv.router.Get("readGame").GetHandler())

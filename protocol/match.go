@@ -29,8 +29,13 @@ func (s *Match) IsFull() bool {
 	return int(s.NumberOfPlayersRequired) == len(s.Players)
 }
 
-// NextPLayer ...
-func (s *Match) NextPLayer(p Player) *Player {
+// IsEnded ...
+func (s *Match) IsEnded() bool {
+	return s.EndedAt != nil
+}
+
+// NextPlayer ...
+func (s *Match) NextPlayer(p Player) *Player {
 	i := funk.IndexOf(s.Players, p)
 	if i == -1 {
 		return nil

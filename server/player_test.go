@@ -15,7 +15,7 @@ import (
 func TestGetPlayersNameHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := New("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	h := http.Handler(srv.router.Get("getPlayersName").GetHandler())
@@ -50,7 +50,7 @@ func TestGetPlayersNameHandler(t *testing.T) {
 func TestReadPlayerNameHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := New("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	var (

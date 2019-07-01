@@ -56,6 +56,8 @@ func TestBeginTransactionAbort(t *testing.T) {
 
 	require.True(t, trn.Closed())
 
+	require.Empty(t, trn.Errors())
+
 	trn = s.BeginTransaction()
 
 	_, err = trn.MatchRead(id)
