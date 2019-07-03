@@ -45,6 +45,13 @@ func (s *Server) createMatchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !(reqBody.NumberOfPlayersRequired >= s.game.MinPlayers() && reqBody.NumberOfPlayersRequired <= s.game.MaxPlayers()) {
+		response.WriteJSON(w, http.StatusBadRequest, body.New().Ko(
+			fmt.Errorf("The number of players must be between %d and %d", s.game.MinPlayers(), s.game.MaxPlayers()),
+		))
+
+		return
+	}
 	if err = s.game.IsMatchValid(&reqBody); err != nil {
 		response.WriteJSON(w, http.StatusBadRequest, body.New().Ko(err))
 

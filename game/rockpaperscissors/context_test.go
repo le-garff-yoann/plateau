@@ -58,13 +58,13 @@ func TestGameRuntime(t *testing.T) {
 		return match
 	}
 
-	require.Nil(t, fight(ReqRock, ReqRock).EndedAt)
-	require.Nil(t, fight(ReqPaper, ReqPaper).EndedAt)
-	require.Nil(t, fight(ReqScissors, ReqScissors).EndedAt)
+	require.False(t, fight(ReqRock, ReqRock).IsEnded())
+	require.False(t, fight(ReqPaper, ReqPaper).IsEnded())
+	require.False(t, fight(ReqScissors, ReqScissors).IsEnded())
 
 	finalMatch := fight(ReqScissors, ReqRock)
 
-	require.NotNil(t, finalMatch.EndedAt)
+	require.True(t, finalMatch.IsEnded())
 
 	require.NotEqual(t, finalMatch.Players[0].Wins, finalMatch.Players[1].Wins)
 	require.NotEqual(t, finalMatch.Players[0].Loses, finalMatch.Players[1].Loses)

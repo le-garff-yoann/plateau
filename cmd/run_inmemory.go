@@ -3,9 +3,10 @@
 package cmd
 
 import (
+	"plateau/store"
 	"plateau/store/inmemory"
 )
 
-func newStore() *inmemory.Store {
+func newStore() store.Store {
 	return &inmemory.Store{}
 }

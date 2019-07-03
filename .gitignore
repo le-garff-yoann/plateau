@@ -5,6 +5,7 @@
 *.so
 *.dylib
 *.stackdump
+assert.sh
 /dist
 
 # Test binary, built with `go test -c`.

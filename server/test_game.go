@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"plateau/protocol"
 	"plateau/store"
 )
@@ -33,10 +32,6 @@ func (s *surrenderGame) Description() string {
 
 // IsMatchValid implements `Game` interface.
 func (s *surrenderGame) IsMatchValid(g *protocol.Match) error {
-	if !(g.NumberOfPlayersRequired >= s.MinPlayers() && g.NumberOfPlayersRequired <= s.MaxPlayers()) {
-		return fmt.Errorf("The number of players must be between %d and %d", s.MinPlayers(), s.MaxPlayers())
-	}
-
 	return nil
 }
 

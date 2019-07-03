@@ -6,14 +6,4 @@ COPY dist/backend/plateau /
 COPY vue/plateau/index.html /public/
 COPY vue/plateau/dist /public/dist
 
-ENV PLATEAU_LISTENER 8080
-
-EXPOSE 8080
-
 ENTRYPOINT [ "/plateau" ]
-
-CMD [ \
-    "--listen", "${PLATEAU_LISTENER}", \
-    "--listen-static-dir", "/public/", \
-    "--session-key", "${PLATEAU_SESSION_KEY}", \
-]

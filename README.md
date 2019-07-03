@@ -16,6 +16,8 @@
 
 **The code in this repository will build the binary for the [Rock–paper–scissors](https://en.wikipedia.org/wiki/Rock%E2%80%93paper%E2%80%93scissors) game.**
 
+**Please read [these instructions](CUSTOMIZING.md) is you want to customize *plateau* for another game.**
+
 ```bash
 # Build to use the process memory as the store.
 go build -tags="run_rockpaperscissors run_inmemory" -o dist/plateau 
@@ -26,8 +28,6 @@ go build -tags="run_rockpaperscissors run_inmemory" -o dist/plateau
 # Start the server.
 dist/plateau run -l :3000 --session-key my-STRONG-secret
 ```
-
-**N.B.** Please read [these instructions](CUSTOMIZING.md) is you want to "customize and build" for another game.
 
 **N.B.** Parameters to the `run` subcommand may vary function of the flags declared by `store.RunCommandSetter(*cobra.Command)` (and thus by the implementation of `store.Store`).
 
@@ -70,7 +70,7 @@ curl -b $COOKIE_FILE -X PATCH $BASE/api/matchs/$match_id \
 ## Test a 2-player game in a shell (t2pg)
 
 ```bash
-. t2pg.bash
+. helpers.bash
 
 t2pg_setupmatch P1 P2
 

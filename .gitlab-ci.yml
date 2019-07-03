@@ -1,16 +1,18 @@
 ---
 stages:
-  - test
+  - unit tests
   - build
-  - release
+  - docker build
+  - integration tests
+  - docker release
 
 image: golang:1.11.5
 
 variables:
   _GOTAGS: "run_rockpaperscissors run_inmemory"
 
-go:test:
-  stage: test
+go:unit tests:
+  stage: unit tests
   before_script:
     - cd $GOPATH/src
     - ln -s $CI_PROJECT_DIR $CI_PROJECT_NAME
@@ -32,10 +34,10 @@ go:build:
     paths:
       - dist/
   dependencies:
-    - go:test
+    - go:unit tests
 
-docker:release:backend:
-  stage: release
+docker:build:backend:
+  stage: docker build
   services:
     - docker:dind
   image: docker:git
@@ -46,11 +48,48 @@ docker:release:backend:
     - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
   dependencies:
     - go:build
+
+bash:helpers:integration tests:
+  stage: integration tests
+  services:
+    - docker:dind
+  image: docker
+  variables:
+    PLATEAU_IMAGE: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
+    BASH_ASSERT_IMAGE: $CI_REGISTRY/le-garff-yoann/docker-bash-assert
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
+  script:
+    - docker pull $PLATEAU_IMAGE
+    - docker pull $BASH_ASSERT_IMAGE
+    - >
+      docker run -d --name plateau
+      $PLATEAU_IMAGE
+      run -l :3000 --session-key s
+    - sleep 10
+    - >
+      docker run -d --link plateau --name assert
+      --entrypoint sleep
+      $BASH_ASSERT_IMAGE
+      300
+    - |
+      for f in *.bash
+      do
+        docker cp $f assert:/tmp
+      done
+    - >
+      docker exec
+      -w /tmp
+      -e T2PG_PLATEAU_BASEURL=http://plateau:3000
+      assert
+      bash helpers_test.bash
+  dependencies:
+    - go:build
   except:
     - tags
 
-docker:release:backend:tags:
-  stage: release
+docker:release:backend:
+  stage: docker release
   services:
     - docker:dind
   image: docker:git
@@ -63,6 +102,6 @@ docker:release:backend:tags:
     - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" "${CI_REGISTRY_IMAGE}:latest"
     - docker push "${CI_REGISTRY_IMAGE}:latest"
   dependencies:
-    - go:build
+    - bash:helpers:integration tests
   only:
     - tags

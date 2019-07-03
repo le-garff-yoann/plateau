@@ -1,7 +1,6 @@
 package rockpaperscissors
 
 import (
-	"fmt"
 	"plateau/protocol"
 )
 
@@ -35,10 +34,6 @@ func (s *Game) Description() string {
 
 // IsMatchValid implements `server.Game` interface.
 func (s *Game) IsMatchValid(g *protocol.Match) error {
-	if !(g.NumberOfPlayersRequired >= s.MinPlayers() && g.NumberOfPlayersRequired <= s.MaxPlayers()) {
-		return fmt.Errorf("The number of players must be between %d and %d", s.MinPlayers(), s.MaxPlayers())
-	}
-
 	return nil
 }
 

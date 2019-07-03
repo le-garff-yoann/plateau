@@ -4,8 +4,9 @@ package cmd
 
 import (
 	"plateau/game/rockpaperscissors"
+	"plateau/server"
 )
 
-func newGame() *rockpaperscissors.Game {
+func newGame() server.Game {
 	return &rockpaperscissors.Game{}
 }
