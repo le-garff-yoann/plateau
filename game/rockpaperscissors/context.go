@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Context implements `server.Game` interface.
+// Context implements the `server.Game` interface.
 func (s *Game) Context(trn store.Transaction, reqContainer *protocol.RequestContainer) *server.Context {
 	return server.NewContext().
 		Before(func(ctx *server.Context, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
@@ -54,11 +54,11 @@ func (s *Game) Context(trn store.Transaction, reqContainer *protocol.RequestCont
 			if len(currentDeal.Messages) >= len(match.Players) {
 				var (
 					playerAMessage = currentDeal.Find(func(msg protocol.Message) bool {
-						return msg.Payload.(protocol.MessageConcealedPayload).Data.(string) == match.Players[0].Name
+						return msg.Payload.(protocol.ConcealedMessagePayload).Data.(string) == match.Players[0].Name
 					})
 
 					playerBMessage = currentDeal.Find(func(msg protocol.Message) bool {
-						return msg.Payload.(protocol.MessageConcealedPayload).Data.(string) == match.Players[1].Name
+						return msg.Payload.(protocol.ConcealedMessagePayload).Data.(string) == match.Players[1].Name
 					})
 				)
 
@@ -114,7 +114,7 @@ func requestFunc(msg protocol.MessageCode, trn store.Transaction) func(reqContai
 	return func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
 		if err := trn.MatchAddMessageToCurrentDeal(reqContainer.Match.ID, protocol.Message{
 			Code: msg,
-			Payload: protocol.MessageConcealedPayload{
+			Payload: protocol.ConcealedMessagePayload{
 				AllowedNamesCode: []string{reqContainer.Player.Name},
 				Data:             reqContainer.Player.Name,
 			},

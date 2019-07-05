@@ -10,7 +10,6 @@ type surrenderGame struct {
 	minPlayers, maxPlayers uint
 }
 
-// Init implements `Game` interface.
 func (s *surrenderGame) Init() error {
 	s.name = "surrender"
 
@@ -20,27 +19,22 @@ func (s *surrenderGame) Init() error {
 	return nil
 }
 
-// Name implements `Game` interface.
 func (s *surrenderGame) Name() string {
 	return s.name
 }
 
-// Description implements `Game` interface.
 func (s *surrenderGame) Description() string {
 	return s.description
 }
 
-// IsMatchValid implements `Game` interface.
 func (s *surrenderGame) IsMatchValid(g *protocol.Match) error {
 	return nil
 }
 
-// MinPlayers implements `Game` interface.
 func (s *surrenderGame) MinPlayers() uint {
 	return s.minPlayers
 }
 
-// MaxPlayers implements `Game` interface.
 func (s *surrenderGame) MaxPlayers() uint {
 	return s.maxPlayers
 }

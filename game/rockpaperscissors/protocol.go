@@ -3,17 +3,17 @@ package rockpaperscissors
 import "plateau/protocol"
 
 const (
-	// ReqRock ...
+	// ReqRock is the request that generates `MRock`.
 	ReqRock protocol.Request = "PLAY_ROCK"
-	// ReqPaper ...
+	// ReqPaper is the request that generates `MPaper`.
 	ReqPaper protocol.Request = "PLAY_PAPER"
-	// ReqScissors ...
+	// ReqScissors is the request that generates `MScissors`.
 	ReqScissors protocol.Request = "PLAY_SCISSORS"
 
-	// MRock ...
+	// MRock represents a "rock" played.
 	MRock protocol.MessageCode = "ROCK"
-	// MPaper ...
+	// MPaper represents a "paper" played.
 	MPaper protocol.MessageCode = "PAPER"
-	// MScissors ...
+	// MScissors represents a "paper" played.
 	MScissors protocol.MessageCode = "SCISSORS"
 )

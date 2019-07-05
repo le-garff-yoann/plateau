@@ -8,7 +8,7 @@ import (
 	"github.com/ulule/deepcopier"
 )
 
-// PlayerList ...
+// PlayerList implements the `store.Transaction` interface.
 func (s *Transaction) PlayerList() (names []string, err error) {
 	defer func() {
 		if err != nil {
@@ -23,7 +23,7 @@ func (s *Transaction) PlayerList() (names []string, err error) {
 	return names, nil
 }
 
-// PlayerCreate ...
+// PlayerCreate implements the `store.Transaction` interface.
 func (s *Transaction) PlayerCreate(p protocol.Player) (err error) {
 	defer func() {
 		if err != nil {
@@ -42,7 +42,7 @@ func (s *Transaction) PlayerCreate(p protocol.Player) (err error) {
 	return nil
 }
 
-// PlayerRead ...
+// PlayerRead implements the `store.Transaction` interface.
 func (s *Transaction) PlayerRead(name string) (_ *protocol.Player, err error) {
 	defer func() {
 		if err != nil {
@@ -61,7 +61,7 @@ func (s *Transaction) PlayerRead(name string) (_ *protocol.Player, err error) {
 	return &playerCopy, nil
 }
 
-// PlayerIncreaseWins ...
+// PlayerIncreaseWins implements the `store.Transaction` interface.
 func (s *Transaction) PlayerIncreaseWins(name string, increase uint) (err error) {
 	defer func() {
 		if err != nil {
@@ -79,7 +79,7 @@ func (s *Transaction) PlayerIncreaseWins(name string, increase uint) (err error)
 	return nil
 }
 
-// PlayerIncreaseLoses ...
+// PlayerIncreaseLoses implements the `store.Transaction` interface.
 func (s *Transaction) PlayerIncreaseLoses(name string, increase uint) (err error) {
 	defer func() {
 		if err != nil {
@@ -97,7 +97,7 @@ func (s *Transaction) PlayerIncreaseLoses(name string, increase uint) (err error
 	return nil
 }
 
-// PlayerIncreaseTies ...
+// PlayerIncreaseTies implements the `store.Transaction` interface.
 func (s *Transaction) PlayerIncreaseTies(name string, increase uint) (err error) {
 	defer func() {
 		if err != nil {

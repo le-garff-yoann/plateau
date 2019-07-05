@@ -6,7 +6,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-// Broadcaster ...
+// Broadcaster delivers data from the emitter to his subscriber.
 type Broadcaster struct {
 	mux sync.Mutex
 
@@ -16,7 +16,7 @@ type Broadcaster struct {
 	done chan int
 }
 
-// New ...
+// New returns a new `Broascaster`.
 func New() *Broadcaster {
 	return &Broadcaster{
 		emitter:     make(chan interface{}),
@@ -25,12 +25,12 @@ func New() *Broadcaster {
 	}
 }
 
-// Submit ...
+// Submit send data to the registered subscribers.
 func (s *Broadcaster) Submit(e interface{}) {
 	s.emitter <- e
 }
 
-// Subscribe ...
+// Subscribe subscribes a new client for receiving data emitted with `Submit`.
 func (s *Broadcaster) Subscribe() (<-chan interface{}, uuid.UUID) {
 	s.mux.Lock()
 	defer s.mux.Unlock()
@@ -42,7 +42,7 @@ func (s *Broadcaster) Subscribe() (<-chan interface{}, uuid.UUID) {
 	return s.subscribers[uuid], uuid
 }
 
-// Unsubscribe ...
+// Unsubscribe unsubscribes the client based on the `UUID` which was returned by `Subscribe`.
 func (s *Broadcaster) Unsubscribe(uuid uuid.UUID) bool {
 	s.mux.Lock()
 	defer s.mux.Unlock()
@@ -56,7 +56,7 @@ func (s *Broadcaster) Unsubscribe(uuid uuid.UUID) bool {
 	return ok
 }
 
-// Run ...
+// Run starts the broadcaster.
 func (s *Broadcaster) Run() {
 	for {
 		select {
@@ -83,7 +83,7 @@ func (s *Broadcaster) Run() {
 	}
 }
 
-// Done ...
+// Done stops the broadcaster.
 func (s *Broadcaster) Done() {
 	s.done <- 0
 }

@@ -1,30 +1,30 @@
 package protocol
 
-// Request ...
+// Request represents a request emitted by a `Player`.
 type Request string
 
 const (
-	// ReqListRequests ...
+	// ReqListRequests means that a `Player` wants
+	// to display the list of available `Request`.
 	ReqListRequests Request = "?" // REFACTOR: Must have a dedicated endpoint?
-	// ReqPlayerAccepts ...
+	// ReqPlayerAccepts means that a `Player` accepts something.
 	ReqPlayerAccepts Request = "PLAYER_ACCEPTS"
-	// ReqPlayerRefuses ...
+	// ReqPlayerRefuses means that a `Player` refuses something.
 	ReqPlayerRefuses Request = "PLAYER_REFUSES"
-	// ReqPlayerWantToJoin ...
+	// ReqPlayerWantToJoin means that a `Player` want to join a `Match`.
 	ReqPlayerWantToJoin Request = "PLAYER_WANT_TO_JOIN"
-	// ReqPlayerWantToLeave ...
+	// ReqPlayerWantToLeave means that a `Player` want to leave a `Match`.
 	ReqPlayerWantToLeave Request = "PLAYER_WANT_TO_LEAVE"
-	// ReqPlayerWantToStartTheGame ...
-	ReqPlayerWantToStartTheGame Request = "PLAYER_WANT_TO_START_THE_GAME"
+	// ReqPlayerWantToStartTheMatch means that a `Player` want to start a `Match`.
+	ReqPlayerWantToStartTheMatch Request = "PLAYER_WANT_TO_START_THE_MATCH"
 )
 
 func (s Request) String() string {
 	return string(s)
 }
 
-// RequestContainer ...
+// RequestContainer is `Request`'s container.
 type RequestContainer struct {
-	// ID      uuid.UUID `json:"id"`
 	Request `json:"request"`
 
 	Player *Player `json:"-"`

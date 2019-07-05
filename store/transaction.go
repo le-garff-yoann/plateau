@@ -5,7 +5,10 @@ import (
 	"time"
 )
 
-// Transaction ...
+// Transaction represents a specialized transaction.
+//
+// It has `Commit()` and `Abort()` which allows
+// an [ACID](https://en.wikipedia.org/wiki/ACID)-compliant implementation.
 type Transaction interface {
 	Commit()
 	Abort()

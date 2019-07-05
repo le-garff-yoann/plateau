@@ -7,7 +7,9 @@ import (
 	"github.com/thoas/go-funk"
 )
 
-// Match ...
+// Match is the representation of a match,
+// with its beginning, its end, its `Player` and
+// its interactions a.k.a `Deal`.
 type Match struct {
 	ID string `json:"id"`
 
@@ -24,17 +26,19 @@ func (s *Match) String() string {
 	return s.ID
 }
 
-// IsFull ...
+// IsFull returns `true` if the number of `Player`
+// present equals `Match.NumberOfPlayersRequired`.
 func (s *Match) IsFull() bool {
 	return int(s.NumberOfPlayersRequired) == len(s.Players)
 }
 
-// IsEnded ...
+// IsEnded returns `true` if `Match.EndedAt` isn't `nil`.
 func (s *Match) IsEnded() bool {
 	return s.EndedAt != nil
 }
 
-// NextPlayer ...
+// NextPlayer returns the next players after *p* in
+// the `Match.Players` slice.
 func (s *Match) NextPlayer(p Player) *Player {
 	i := funk.IndexOf(s.Players, p)
 	if i == -1 {
@@ -48,7 +52,8 @@ func (s *Match) NextPlayer(p Player) *Player {
 	return &s.Players[i+1]
 }
 
-// RandomPlayer ...
+// RandomPlayer returns a random `Match.Players` from
+// the `Match.Players` slice.
 func (s *Match) RandomPlayer() *Player {
 	rand.Seed(time.Now().Unix())
 

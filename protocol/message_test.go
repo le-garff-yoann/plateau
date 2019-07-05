@@ -20,7 +20,7 @@ func TestMessageConcealed(t *testing.T) {
 
 	concealedMsg := Message{
 		Code: msg.Code,
-		Payload: MessageConcealedPayload{
+		Payload: ConcealedMessagePayload{
 			AllowedNamesCode:    nil,
 			AllowedNamesPayload: nil,
 			Data:                msg.Payload.(string),
@@ -28,8 +28,8 @@ func TestMessageConcealed(t *testing.T) {
 	}
 	require.Equal(t, &msg, concealedMsg.Concealed(playerAName))
 
-	mutateConcealedMsgPayload := func(mutater func(*MessageConcealedPayload)) {
-		p := concealedMsg.Payload.(MessageConcealedPayload)
+	mutateConcealedMsgPayload := func(mutater func(*ConcealedMessagePayload)) {
+		p := concealedMsg.Payload.(ConcealedMessagePayload)
 
 		mutater(&p)
 
@@ -38,23 +38,23 @@ func TestMessageConcealed(t *testing.T) {
 
 	require.Equal(t, msg.Code, concealedMsg.Concealed().Code)
 
-	mutateConcealedMsgPayload(func(m *MessageConcealedPayload) {
+	mutateConcealedMsgPayload(func(m *ConcealedMessagePayload) {
 		m.AllowedNamesCode = []string{playerBName}
 	})
 	require.Empty(t, concealedMsg.Concealed(playerAName).Code)
 	require.Equal(t, msg.Code, concealedMsg.Concealed().Code)
 
-	mutateConcealedMsgPayload(func(m *MessageConcealedPayload) {
+	mutateConcealedMsgPayload(func(m *ConcealedMessagePayload) {
 		m.AllowedNamesCode = []string{playerAName}
 	})
 	require.Equal(t, msg.Code, concealedMsg.Concealed(playerAName).Code)
 
-	mutateConcealedMsgPayload(func(m *MessageConcealedPayload) {
+	mutateConcealedMsgPayload(func(m *ConcealedMessagePayload) {
 		m.AllowedNamesPayload = []string{playerBName}
 	})
 	require.Empty(t, concealedMsg.Concealed(playerAName).Payload)
 
-	mutateConcealedMsgPayload(func(m *MessageConcealedPayload) {
+	mutateConcealedMsgPayload(func(m *ConcealedMessagePayload) {
 		m.AllowedNamesPayload = []string{playerAName}
 	})
 	require.Equal(t, msg.Payload, concealedMsg.Concealed(playerAName).Payload)

@@ -35,7 +35,7 @@ func (s *deal) toProtocolStruct(pPlayers []*protocol.Player) *protocol.Deal {
 	}
 }
 
-// CreateDealsChangeIterator ...
+// CreateDealsChangeIterator implements the `store.DealChangeIterator` interface.
 func (s *Store) CreateDealsChangeIterator(id string) (store.DealChangeIterator, error) {
 	itr := DealChangeIterator{dealChangesBroadcaster: s.dealChangesBroadcaster}
 
@@ -44,7 +44,7 @@ func (s *Store) CreateDealsChangeIterator(id string) (store.DealChangeIterator, 
 	return &itr, nil
 }
 
-// DealChangeIterator implements `store.DealChangeIterator` interface.
+// DealChangeIterator implements the `store.DealChangeIterator` interface.
 type DealChangeIterator struct {
 	dealChangesBroadcaster *broadcaster.Broadcaster
 
@@ -52,7 +52,7 @@ type DealChangeIterator struct {
 	dealChangesBroadcasterUUID uuid.UUID
 }
 
-// Next implements `store.DealChangeIterator` interface.
+// Next implements the `store.DealChangeIterator` interface.
 func (s *DealChangeIterator) Next(dealChange *store.DealChange) bool {
 	v, ok := <-s.dealChangesBroadcasterChan
 	if !ok {
@@ -64,7 +64,7 @@ func (s *DealChangeIterator) Next(dealChange *store.DealChange) bool {
 	return true
 }
 
-// Close implements `store.DealChangeIterator` interface.
+// Close implements the `store.DealChangeIterator` interface.
 func (s *DealChangeIterator) Close() error {
 	s.dealChangesBroadcaster.Unsubscribe(s.dealChangesBroadcasterUUID)
 

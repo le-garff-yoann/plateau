@@ -4,7 +4,7 @@
     <img src="docs/content/assets/img/plateau-logo.png" alt="Plateau" title="Plateau" />
 </p>
 
-[![Stability Status](https://img.shields.io/badge/stability-work_in_progress-red.svg)](https://github.com/orangemug/stability-badges)
+[![Stability Status](https://img.shields.io/badge/stability-unstable-yellow.svg)](https://github.com/orangemug/stability-badges)
 [![Pipeline Status](https://gitlab.com/le-garff-yoann/plateau/badges/master/pipeline.svg)](https://gitlab.com/le-garff-yoann/plateau/pipelines)
 ![Go Coverage Report](https://gitlab.com/le-garff-yoann/plateau/badges/master/coverage.svg?job=go:test)
 [![Go Report Card](https://goreportcard.com/badge/github.com/le-garff-yoann/plateau)](https://goreportcard.com/report/github.com/le-garff-yoann/plateau)
@@ -51,7 +51,7 @@ curl $BASE/user/login --cookie-jar $COOKIE_FILE -d $USERINFO
 ### Play!
 
 ```bash
-# Create and returns a match.
+# Create and return a match.
 match_id=$(
 curl -b $COOKIE_FILE -X POST $BASE/api/matchs \
     -d '{"number_of_players_required":2}' \
@@ -72,10 +72,20 @@ curl -b $COOKIE_FILE -X PATCH $BASE/api/matchs/$match_id \
 ```bash
 . helpers.bash
 
+# Setup a match with P1 (player 1) and P2 (player 2) as participants.
 t2pg_setupmatch P1 P2
 
-t2pg_send P1 ? # t2pg_send P1 PLAY_ROCK
-t2pg_send P2 ? # t2pg_send P1 PLAY_PAPER
+# Send a request from P1 and P2 perspective.
+t2pg_send P1 ?
+t2pg_send P2 ? 
+# t2pg_send P1 PLAY_ROCK
+# t2pg_send P1 PLAY_PAPER
+
+# Show the match from the perspective of P1.
+t2pg_match P1
+
+# Show the deals of the matchs from the perspective of P1.
+t2pg_deals P1
 ```
 
 ## Frontend

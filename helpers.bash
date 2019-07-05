@@ -6,7 +6,9 @@ new_plateau() {
         return 1
     fi
 
-    echo "Copy $PWD to ~/$1"
+    echo "Creation of the new project $1..."
+
+    echo "Copy from $PWD to ~/$1"
     cp -r $PWD ~/$1
 
     pushd ~/$1
@@ -26,10 +28,10 @@ func newGame() server.Game {
 }
 EOF
 
-    echo "Create game/$1/"
+    echo "Creation of game/$1/"
     mkdir game/$1
 
-    echo "Write game/$1/$1.go"
+    echo "Writing of game/$1/$1.go"
     cat > game/$1/$1.go <<EOF
 package $1
 
@@ -81,7 +83,7 @@ func (s *Game) MaxPlayers() uint {
 	return s.maxPlayers
 }
 EOF
-    echo "Write game/$1/$1_test.go"
+    echo "Writing of game/$1/$1_test.go"
     cat > game/$1/$1_test.go <<EOF
 package $1
 
@@ -107,7 +109,7 @@ func TestGame(t *testing.T) {
 }
 EOF
 
-    echo "Write game/$1/context.go"
+    echo "Writing of game/$1/context.go"
     cat > game/$1/context.go <<EOF
 package $1
 
@@ -122,7 +124,7 @@ func (s *Game) Context(trn store.Transaction, reqContainer *protocol.RequestCont
 	return server.NewContext()
 }
 EOF
-    echo "Write game/$1/context_test.go"
+    echo "Writing of game/$1/context_test.go"
     cat > game/$1/context_test.go <<EOF
 package $1
 
@@ -148,20 +150,24 @@ func TestGameRuntime(t *testing.T) {
 
 	testMatchRuntime.TestRequest("foo", protocol.ReqPlayerWantToJoin, protocol.ResOK)
 	testMatchRuntime.TestRequest("bar", protocol.ReqPlayerWantToJoin, protocol.ResOK)
-	testMatchRuntime.TestRequest("foo", protocol.ReqPlayerWantToStartTheGame, protocol.ResOK)
+	testMatchRuntime.TestRequest("foo", protocol.ReqPlayerWantToStartTheMatch, protocol.ResOK)
 	testMatchRuntime.TestRequest("foo", protocol.ReqPlayerAccepts, protocol.ResOK)
 	testMatchRuntime.TestRequest("bar", protocol.ReqPlayerAccepts, protocol.ResOK)
 }
 EOF
 
-    echo "Cleaning the project"
+    echo "Cleaning of the project $1..."
     rm -Rf \
-        vendor/ \
         .git/ \
+        .gitlab-ci.yml \
+        *.md \
+        vendor/ \
         cmd/run_rockpaperscissors.go \
         game/rockpaperscissors
 
     popd
+
+    echo "Done"
 }
 
 _t2pg_req() {
@@ -217,8 +223,8 @@ t2pg_setupmatch() {
     (
         t2pg_send $1 PLAYER_WANT_TO_JOIN && \
         t2pg_send $2 PLAYER_WANT_TO_JOIN && \
-        t2pg_send $2 PLAYER_WANT_TO_START_THE_GAME && \
+        t2pg_send $2 PLAYER_WANT_TO_START_THE_MATCH && \
         t2pg_send $2 PLAYER_ACCEPTS && \
         t2pg_send $1 PLAYER_ACCEPTS
-    ) 1>/dev/null && echo "Done."
+    ) 1>/dev/null && echo "Done"
 }

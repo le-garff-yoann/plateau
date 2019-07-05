@@ -12,7 +12,7 @@ import (
 
 var sessionKey string
 
-// Store ...
+// Store implements the `store.Store` interface.
 type Store struct {
 	trnMux sync.Mutex
 
@@ -22,7 +22,7 @@ type Store struct {
 	sessionStore sessions.Store
 }
 
-// Open implements `store.Store` interface.
+// Open implements the `store.Store` interface.
 func (s *Store) Open() error {
 	s.inMemory = &inMemory{}
 
@@ -34,14 +34,14 @@ func (s *Store) Open() error {
 	return nil
 }
 
-// Close implements `store.Store` interface.
+// Close implements the `store.Store` interface.
 func (s *Store) Close() error {
 	s.dealChangesBroadcaster.Done()
 
 	return nil
 }
 
-// RunCommandSetter implements `store.Store` interface.
+// RunCommandSetter implements the `store.Store` interface.
 func (s *Store) RunCommandSetter(runCmd *cobra.Command) {
 	runCmd.
 		Flags().
@@ -50,12 +50,12 @@ func (s *Store) RunCommandSetter(runCmd *cobra.Command) {
 	// TODO: Add a switch to configure the session expiration (MaxAge).
 }
 
-// Sessions implements `store.Store` interface.
+// Sessions implements the `store.Store` interface.
 func (s *Store) Sessions() sessions.Store {
 	return s.sessionStore
 }
 
-// BeginTransaction ...
+// BeginTransaction implements the `store.Store` interface.
 func (s *Store) BeginTransaction() store.Transaction {
 	s.trnMux.Lock()
 

@@ -1,20 +1,24 @@
 package protocol
 
-// Response ...
+// Response represents a response sent to a
+// `Player` who sent a `Request`.
 type Response string
 
 const (
-	// ResOK ...
+	// ResOK means that the processing of the associated
+	// `Request` has successfully completed.
 	ResOK Response = "OK"
-	// ResAccepted ...
-	ResAccepted Response = "ACCEPTED"
-	// ResBadRequest ...
+	// ResBadRequest means that the associated
+	// `Request` is malformed.
 	ResBadRequest Response = "BAD_REQUEST"
-	// ResForbidden ...
+	// ResForbidden means that the associated
+	// `Request` is fordidden.
 	ResForbidden Response = "FORBIDDEN"
-	// ResInternalError ...
+	// ResInternalError means that the request generated
+	// an unexpected server-side error.
 	ResInternalError Response = "INTERNAL_ERROR"
-	// ResNotImplemented ...
+	// ResNotImplemented means that the request
+	// is not recognized.
 	ResNotImplemented Response = "NOT_IMPLEMENTED"
 )
 
@@ -22,7 +26,7 @@ func (s Response) String() string {
 	return string(s)
 }
 
-// ResponseContainer ...
+// ResponseContainer is `Response`'s container.
 type ResponseContainer struct {
 	Response `json:"response"`
 	Body     interface{} `json:"body,omitempty"`

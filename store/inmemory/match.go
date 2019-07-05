@@ -83,7 +83,7 @@ func (s *match) toProtocolStruct(pPlayers []*protocol.Player) *protocol.Match {
 	}
 }
 
-// MatchList ...
+// MatchList implements the `store.Transaction` interface.
 func (s *Transaction) MatchList() (IDs []string, err error) {
 	defer func() {
 		if err != nil {
@@ -98,7 +98,7 @@ func (s *Transaction) MatchList() (IDs []string, err error) {
 	return IDs, nil
 }
 
-// MatchCreate ...
+// MatchCreate implements the `store.Transaction` interface.
 func (s *Transaction) MatchCreate(m protocol.Match) (id string, err error) {
 	defer func() {
 		if err != nil {
@@ -113,7 +113,7 @@ func (s *Transaction) MatchCreate(m protocol.Match) (id string, err error) {
 	return m.ID, nil
 }
 
-// MatchRead ...
+// MatchRead implements the `store.Transaction` interface.
 func (s *Transaction) MatchRead(id string) (_ *protocol.Match, err error) {
 	defer func() {
 		if err != nil {
@@ -132,7 +132,7 @@ func (s *Transaction) MatchRead(id string) (_ *protocol.Match, err error) {
 	return &matchCopy, nil
 }
 
-// MatchEndedAt ...
+// MatchEndedAt implements the `store.Transaction` interface.
 func (s *Transaction) MatchEndedAt(id string, val time.Time) (err error) {
 	defer func() {
 		if err != nil {
@@ -150,7 +150,7 @@ func (s *Transaction) MatchEndedAt(id string, val time.Time) (err error) {
 	return nil
 }
 
-// MatchCreateDeal ...
+// MatchCreateDeal implements the `store.Transaction` interface.
 func (s *Transaction) MatchCreateDeal(id string, deal protocol.Deal) (err error) {
 	defer func() {
 		if err != nil {
@@ -169,7 +169,7 @@ func (s *Transaction) MatchCreateDeal(id string, deal protocol.Deal) (err error)
 	return nil
 }
 
-// MatchUpdateCurrentDealHolder ...
+// MatchUpdateCurrentDealHolder implements the `store.Transaction` interface.
 func (s *Transaction) MatchUpdateCurrentDealHolder(id, newHolderName string) (err error) {
 	defer func() {
 		if err != nil {
@@ -195,7 +195,7 @@ func (s *Transaction) MatchUpdateCurrentDealHolder(id, newHolderName string) (er
 	return nil
 }
 
-// MatchAddMessageToCurrentDeal ...
+// MatchAddMessageToCurrentDeal implements the `store.Transaction` interface.
 func (s *Transaction) MatchAddMessageToCurrentDeal(id string, message protocol.Message) (err error) {
 	defer func() {
 		if err != nil {
@@ -222,7 +222,7 @@ func (s *Transaction) MatchAddMessageToCurrentDeal(id string, message protocol.M
 	return nil
 }
 
-// MatchPlayerJoins ...
+// MatchPlayerJoins implements the `store.Transaction` interface.
 func (s *Transaction) MatchPlayerJoins(id, name string) (err error) {
 	defer func() {
 		if err != nil {
@@ -249,7 +249,7 @@ func (s *Transaction) MatchPlayerJoins(id, name string) (err error) {
 	return nil
 }
 
-// MatchPlayerLeaves ...
+// MatchPlayerLeaves implements the `store.Transaction` interface.
 func (s *Transaction) MatchPlayerLeaves(id, name string) (err error) {
 	defer func() {
 		if err != nil {

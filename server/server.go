@@ -12,7 +12,7 @@ import (
 // ServerName is the server name.
 const ServerName = "plateau"
 
-// Server ...
+// Server is basically the *plateau* runtime.
 type Server struct {
 	game Game
 
@@ -28,7 +28,7 @@ type Server struct {
 	doneWg          sync.WaitGroup
 }
 
-// New ...
+// New returns a new `Server`. It initializes the `Game` and opens the `store.Store`.
 func New(gm Game, str store.Store) (*Server, error) {
 	s := &Server{
 		game:            gm,
@@ -48,7 +48,7 @@ func New(gm Game, str store.Store) (*Server, error) {
 	return s, nil
 }
 
-// Init ...
+// Init returns a new `Server` with in addition the *gorilla/mux* router initialized.
 func Init(listener, listenerStaticDir string, gm Game, str store.Store) (*Server, error) {
 	s, err := New(gm, str)
 	if err != nil {
@@ -139,7 +139,7 @@ func Init(listener, listenerStaticDir string, gm Game, str store.Store) (*Server
 	return s, nil
 }
 
-// Start ...
+// Start starts the server.
 func (s *Server) Start() error {
 	go s.doneBroadcaster.Run()
 
@@ -156,7 +156,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Stop ...
+// Stop stops the server.
 func (s *Server) Stop() error {
 	s.doneBroadcaster.Submit(0)
 	s.doneWg.Wait()
@@ -166,7 +166,7 @@ func (s *Server) Stop() error {
 	return s.store.Close()
 }
 
-// Listen ...
+// Listen starts the HTTP server.
 func (s *Server) Listen() error {
 	return s.httpServer.ListenAndServe()
 }

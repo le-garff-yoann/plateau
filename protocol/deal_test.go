@@ -75,7 +75,7 @@ func TestWithMessagesConcealed(t *testing.T) {
 
 	deal := Deal{Messages: []Message{Message{
 		Code: MPlayerAccepts,
-		Payload: MessageConcealedPayload{
+		Payload: ConcealedMessagePayload{
 			AllowedNamesCode: []string{"foo"},
 		},
 	}}}

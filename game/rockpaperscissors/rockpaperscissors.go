@@ -4,13 +4,13 @@ import (
 	"plateau/protocol"
 )
 
-// Game ...
+// Game implements the `server.Game` interface.
 type Game struct {
 	name, description      string
 	minPlayers, maxPlayers uint
 }
 
-// Init implements `server.Game` interface.
+// Init implements the `server.Game` interface.
 func (s *Game) Init() error {
 	s.name = "rock–paper–scissors"
 
@@ -22,27 +22,27 @@ func (s *Game) Init() error {
 	return nil
 }
 
-// Name implements `server.Game` interface.
+// Name implements the `server.Game` interface.
 func (s *Game) Name() string {
 	return s.name
 }
 
-// Description implements `server.Game` interface.
+// Description implements the `server.Game` interface.
 func (s *Game) Description() string {
 	return s.description
 }
 
-// IsMatchValid implements `server.Game` interface.
+// IsMatchValid implements the`server.Game` interface.
 func (s *Game) IsMatchValid(g *protocol.Match) error {
 	return nil
 }
 
-// MinPlayers implements `server.Game` interface.
+// MinPlayers implements the `server.Game` interface.
 func (s *Game) MinPlayers() uint {
 	return s.minPlayers
 }
 
-// MaxPlayers implements `server.Game` interface.
+// MaxPlayers implements the `server.Game` interface.
 func (s *Game) MaxPlayers() uint {
 	return s.maxPlayers
 }

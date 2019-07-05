@@ -1,24 +1,24 @@
 package body
 
-// Body ...
+// Body represents the standard return of an HTTP or *plateau* request.
 type Body struct {
 	Successes []string `json:"ok,omitempty"`
 	Failures  []string `json:"ko,omitempty"`
 }
 
-// New ...
+// New returns a new `Body`.
 func New() *Body {
 	return &Body{}
 }
 
-// Ok ...
+// Ok adds one or more `string` as successful messages.
 func (s *Body) Ok(ok ...string) *Body {
 	s.Successes = append(s.Successes, ok...)
 
 	return s
 }
 
-// Ko ...
+// Ko adds one or more `error` as error messages.
 func (s *Body) Ko(ko ...error) *Body {
 	for _, e := range ko {
 		s.Failures = append(s.Failures, e.Error())

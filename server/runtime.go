@@ -24,7 +24,7 @@ func (s *Server) guardRuntime(matchID string) (*matchRuntime, error) {
 			game:                    s.game,
 			matchID:                 matchID,
 			dealsChangesBroadcaster: broadcaster.New(),
-			done:                    make(chan int),
+			done: make(chan int),
 		}
 
 		s.matchRuntimes[matchID] = mRuntime
@@ -186,7 +186,7 @@ func leaveContext(trn store.Transaction, reqContainer *protocol.RequestContainer
 
 func wantToStartMatchContext(trn store.Transaction, reqContainer *protocol.RequestContainer) *Context {
 	return NewContext().
-		On(protocol.ReqPlayerWantToStartTheGame, func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
+		On(protocol.ReqPlayerWantToStartTheMatch, func(reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
 			if !reqContainer.Match.IsFull() {
 				return &protocol.ResponseContainer{
 					Response: protocol.ResForbidden,

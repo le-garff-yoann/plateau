@@ -85,7 +85,7 @@ func TestCreateDealsChangeIterator(t *testing.T) {
 	m, _ := trn.MatchRead(id)
 
 	require.Len(t, m.Deals, 2)
-	require.Len(t, m.Deals[len(m.Deals)-1].Messages, 2)
+	require.Len(t, protocol.IndexDeals(m.Deals, 0).Messages, 2)
 
 	require.NoError(t, itr.Close())
 }

@@ -4,7 +4,7 @@ import (
 	"plateau/protocol"
 )
 
-// NewContext ...
+// NewContext returns a new `Context`.
 func NewContext() *Context {
 	return (&Context{
 		nil, nil, nil,
@@ -12,14 +12,15 @@ func NewContext() *Context {
 	})
 }
 
-// Context ...
+// Context is analogous to a router.
+// It embeds one or more handlers that are to be executed according to the `protocol.RequestContainer` received.
 type Context struct {
 	beforeHandler                       func(*Context, *protocol.RequestContainer) *protocol.ResponseContainer
 	afterHandler, notImplementedHandler func(*protocol.RequestContainer) *protocol.ResponseContainer
 	handlers                            map[protocol.Request]func(*protocol.RequestContainer) *protocol.ResponseContainer
 }
 
-// Requests ...
+// Requests lists the `protocol.Request` on which the `Context` will execute.
 func (s *Context) Requests() (requests []protocol.Request) {
 	for r := range s.handlers {
 		requests = append(requests, r)
@@ -28,35 +29,35 @@ func (s *Context) Requests() (requests []protocol.Request) {
 	return requests
 }
 
-// Before ...
+// Before registers a handler that will execute before all others.
 func (s *Context) Before(handlerFunc func(*Context, *protocol.RequestContainer) *protocol.ResponseContainer) *Context {
 	s.beforeHandler = handlerFunc
 
 	return s
 }
 
-// After ...
+// After registers a handler that will execute after all others.
 func (s *Context) After(handlerFunc func(*protocol.RequestContainer) *protocol.ResponseContainer) *Context {
 	s.afterHandler = handlerFunc
 
 	return s
 }
 
-// OnNotImplemented ...
+// OnNotImplemented registers a handler that will execute on an unregistered `protocol.Request`.
 func (s *Context) OnNotImplemented(handlerFunc func(*protocol.RequestContainer) *protocol.ResponseContainer) *Context {
 	s.notImplementedHandler = handlerFunc
 
 	return s
 }
 
-// On ...
+// On registers a handler that will execute on a particular `protocol.Request`.
 func (s *Context) On(request protocol.Request, handlerFunc func(*protocol.RequestContainer) *protocol.ResponseContainer) *Context {
 	s.handlers[request] = handlerFunc
 
 	return s
 }
 
-// Complete ...
+// Complete merges itself with another `Context`. Priority on merging is given to the new one.
 func (s *Context) Complete(ctx *Context) *Context {
 	if ctx.beforeHandler != nil {
 		s.beforeHandler = ctx.beforeHandler

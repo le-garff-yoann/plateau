@@ -1,6 +1,7 @@
 package protocol
 
-// Player ...
+// Player is the representation of a player,
+// with its name, password, and score (wins, loses and ties).
 type Player struct {
 	Name     string `json:"name"`
 	Password string `json:"-"`

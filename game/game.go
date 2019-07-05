@@ -1,3 +1,3 @@
 package game
 
-// Check `server.Game` interface.
+// Check the `server.Game` interface.

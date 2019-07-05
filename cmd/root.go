@@ -14,7 +14,6 @@ import (
 // AppName is the CLI app name.
 const AppName = server.ServerName
 
-// RootCmd is meant to reused across cmd/*/*.go
 var (
 	serverListener, serverListenerStaticDir string
 	logLevel                                = pflag.LogrusLevel(logrus.InfoLevel)

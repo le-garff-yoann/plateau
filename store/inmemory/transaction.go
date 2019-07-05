@@ -4,7 +4,7 @@ import (
 	"plateau/store"
 )
 
-// Transaction ...
+// Transaction implements the `store.Transaction` interface.
 type Transaction struct {
 	errors []error
 
@@ -21,7 +21,7 @@ func (s *Transaction) close() {
 	s.done()
 }
 
-// Commit ...
+// Commit implements the `store.Transaction` interface.
 func (s *Transaction) Commit() {
 	if s.Closed() {
 		panic("You cannot commit a closed transaction")
@@ -31,7 +31,7 @@ func (s *Transaction) Commit() {
 	s.close()
 }
 
-// Abort ...
+// Abort implements the `store.Transaction` interface.
 func (s *Transaction) Abort() {
 	if s.Closed() {
 		panic("You cannot abort a closed transaction")
@@ -40,12 +40,12 @@ func (s *Transaction) Abort() {
 	s.close()
 }
 
-// Closed ...
+// Closed implements the `store.Transaction` interface.
 func (s *Transaction) Closed() bool {
 	return s.closed
 }
 
-// Errors ...
+// Errors implements the `store.Transaction` interface.
 func (s *Transaction) Errors() []error {
 	return s.errors
 }
