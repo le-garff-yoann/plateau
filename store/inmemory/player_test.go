@@ -12,7 +12,11 @@ func TestPlayerList(t *testing.T) {
 	t.Parallel()
 
 	s := &Store{}
-	s.Open()
+
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
@@ -20,7 +24,7 @@ func TestPlayerList(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, names)
 
-	trn.PlayerCreate(protocol.Player{Name: "foo"})
+	require.NoError(t, trn.PlayerCreate(protocol.Player{Name: "foo"}))
 
 	names, err = trn.PlayerList()
 	require.NoError(t, err)
@@ -37,7 +41,10 @@ func TestPlayerCreate(t *testing.T) {
 		s = &Store{}
 	)
 
-	s.Open()
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
@@ -60,11 +67,14 @@ func TestPlayerRead(t *testing.T) {
 		s = &Store{}
 	)
 
-	s.Open()
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
-	trn.PlayerCreate(player)
+	require.NoError(t, trn.PlayerCreate(player))
 
 	p, err := trn.PlayerRead(player.Name)
 	require.NoError(t, err)
@@ -83,15 +93,19 @@ func TestPlayerIncreaseWins(t *testing.T) {
 		s = &Store{}
 	)
 
-	s.Open()
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
-	trn.PlayerCreate(player)
+	require.NoError(t, trn.PlayerCreate(player))
 
 	require.NoError(t, trn.PlayerIncreaseWins(player.Name, 2))
 
-	p, _ := trn.PlayerRead(player.Name)
+	p, err := trn.PlayerRead(player.Name)
+	require.NoError(t, err)
 	require.Equal(t, uint(2), p.Wins)
 
 	require.IsType(t, store.DontExistError(""), trn.PlayerIncreaseWins("bar", 2))
@@ -106,15 +120,19 @@ func TestPlayerIncreaseLoses(t *testing.T) {
 		s = &Store{}
 	)
 
-	s.Open()
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
-	trn.PlayerCreate(player)
+	require.NoError(t, trn.PlayerCreate(player))
 
 	require.NoError(t, trn.PlayerIncreaseLoses(player.Name, 2))
 
-	p, _ := trn.PlayerRead(player.Name)
+	p, err := trn.PlayerRead(player.Name)
+	require.NoError(t, err)
 	require.Equal(t, uint(2), p.Loses)
 
 	require.IsType(t, store.DontExistError(""), trn.PlayerIncreaseLoses("bar", 2))
@@ -129,15 +147,19 @@ func TestPlayerIncreaseTies(t *testing.T) {
 		s = &Store{}
 	)
 
-	s.Open()
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
-	trn.PlayerCreate(player)
+	require.NoError(t, trn.PlayerCreate(player))
 
 	require.NoError(t, trn.PlayerIncreaseTies(player.Name, 2))
 
-	p, _ := trn.PlayerRead(player.Name)
+	p, err := trn.PlayerRead(player.Name)
+	require.NoError(t, err)
 	require.Equal(t, uint(2), p.Ties)
 
 	require.IsType(t, store.DontExistError(""), trn.PlayerIncreaseTies("bar", 2))

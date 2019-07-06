@@ -37,6 +37,39 @@ func TestLoginCredentialsHashedPassword(t *testing.T) {
 	require.True(t, cred.VerifyHash(hPassword))
 }
 
+func TestLoginMiddleware(t *testing.T) {
+	t.Parallel()
+
+	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	require.NoError(t, err)
+
+	require.NoError(t, srv.store.Open())
+	defer func() {
+		require.NoError(t, srv.store.Close())
+	}()
+
+	h := srv.loginMiddleware(http.Handler(http.FileServer(http.Dir(""))))
+
+	req, err := http.NewRequest("GET", "", nil)
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+
+	h.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusForbidden, rr.Code)
+
+	_, rr = testRegisterAndLoginHandlers(t, srv, "foo", "foo")
+
+	for _, c := range rr.Result().Cookies() {
+		req.AddCookie(c)
+	}
+
+	h.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusCreated, rr.Code)
+}
+
 func testRegisterAndLoginHandlers(t *testing.T, srv *Server, username, password string) (func(h http.Handler) *httptest.ResponseRecorder, *httptest.ResponseRecorder) {
 	var (
 		registerH = http.Handler(srv.router.Get("registerUser").GetHandler())
@@ -69,6 +102,11 @@ func TestRegisterLoginAndLogoutHandlers(t *testing.T) {
 
 	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
+
+	require.NoError(t, srv.store.Open())
+	defer func() {
+		require.NoError(t, srv.store.Close())
+	}()
 
 	newRecorder, _ := testRegisterAndLoginHandlers(t, srv, "foo", "bar")
 

@@ -18,6 +18,11 @@ func TestGetPlayersNameHandler(t *testing.T) {
 	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
+	require.NoError(t, srv.store.Open())
+	defer func() {
+		require.NoError(t, srv.store.Close())
+	}()
+
 	h := http.Handler(srv.router.Get("getPlayersName").GetHandler())
 
 	req, err := http.NewRequest("GET", "", nil)
@@ -39,7 +44,7 @@ func TestGetPlayersNameHandler(t *testing.T) {
 
 	trn := srv.store.BeginTransaction()
 
-	trn.PlayerCreate(player)
+	require.NoError(t, trn.PlayerCreate(player))
 	trn.Commit()
 
 	rr = newRecorder()
@@ -52,6 +57,11 @@ func TestReadPlayerNameHandler(t *testing.T) {
 
 	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
+
+	require.NoError(t, srv.store.Open())
+	defer func() {
+		require.NoError(t, srv.store.Close())
+	}()
 
 	var (
 		h = http.Handler(srv.router.Get("readPlayer").GetHandler())
@@ -78,7 +88,7 @@ func TestReadPlayerNameHandler(t *testing.T) {
 
 	trn := srv.store.BeginTransaction()
 
-	trn.PlayerCreate(player)
+	require.NoError(t, trn.PlayerCreate(player))
 	trn.Commit()
 
 	require.Equal(t, http.StatusOK, newRecorder().Code)

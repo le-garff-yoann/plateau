@@ -1,9 +1,5 @@
 package protocol
 
-import (
-	"github.com/thoas/go-funk"
-)
-
 // Deal represents an exchange between one or more `Player`.
 // The exchange is modeled by a series of `Message`.
 //
@@ -16,18 +12,24 @@ type Deal struct {
 
 // Find searches for and returns the first `Message` validating *cb*.
 func (s *Deal) Find(cb func(Message) bool) *Message {
-	f := funk.Find(s.Messages, cb)
-	if f == nil {
-		return nil
+	for _, msg := range s.Messages {
+		if cb(msg) {
+			return &msg
+		}
 	}
 
-	msg := f.(Message)
-	return &msg
+	return nil
 }
 
 // FindAll searches for and returns all `Message` validating *cb*.
-func (s *Deal) FindAll(cb func(Message) bool) []Message {
-	return funk.Filter(s.Messages, cb).([]Message)
+func (s *Deal) FindAll(cb func(Message) bool) (msgs []Message) {
+	for _, msg := range s.Messages {
+		if cb(msg) {
+			msgs = append(msgs, msg)
+		}
+	}
+
+	return msgs
 }
 
 // FindByMessageCode searches for and returns the first

@@ -6,8 +6,6 @@ import (
 	"plateau/protocol"
 	"plateau/server/response/body"
 	"plateau/store"
-
-	"github.com/thoas/go-funk"
 )
 
 func (s *Server) guardRuntime(matchID string) (*matchRuntime, error) {
@@ -112,11 +110,17 @@ func (s *matchRuntime) reqContainerHandler(trn store.Transaction, reqContainer *
 		currentDeal := protocol.IndexDeals(reqContainer.Match.Deals, 0)
 
 		if currentDeal == nil || !currentDeal.IsActive() {
-			if funk.Contains(reqContainer.Match.Players, *reqContainer.Player) {
-				ctx.Complete(leaveContext(trn, reqContainer)).Complete(wantToStartMatchContext(trn, reqContainer))
-			} else {
+			func() {
+				for _, p := range reqContainer.Match.Players {
+					if p.Name == reqContainer.Player.Name {
+						ctx.Complete(leaveContext(trn, reqContainer)).Complete(wantToStartMatchContext(trn, reqContainer))
+
+						return
+					}
+				}
+
 				ctx.Complete(joinContext(trn, reqContainer))
-			}
+			}()
 		} else {
 			if currentDeal.Holder.Name == reqContainer.Player.Name {
 				ctx.Complete(askToStartMatchContext(trn, reqContainer))
@@ -226,7 +230,15 @@ func askToStartMatchContext(trn store.Transaction, reqContainer *protocol.Reques
 			}
 
 			for _, player := range match.Players {
-				if !funk.Contains(OKPlayersName, player.Name) {
+				if !func() bool {
+					for _, OKPlayerName := range OKPlayersName {
+						if player.Name == OKPlayerName {
+							return true
+						}
+					}
+
+					return false
+				}() {
 					if err := trn.MatchUpdateCurrentDealHolder(reqContainer.Match.ID, player.Name); err != nil {
 						trn.Abort()
 

@@ -3,8 +3,6 @@ package protocol
 import (
 	"math/rand"
 	"time"
-
-	"github.com/thoas/go-funk"
 )
 
 // Match is the representation of a match,
@@ -40,16 +38,17 @@ func (s *Match) IsEnded() bool {
 // NextPlayer returns the next players after *p* in
 // the `Match.Players` slice.
 func (s *Match) NextPlayer(p Player) *Player {
-	i := funk.IndexOf(s.Players, p)
-	if i == -1 {
-		return nil
+	for i, player := range s.Players {
+		if p.Name == player.Name {
+			if i == len(s.Players)-1 {
+				return &s.Players[0]
+			}
+
+			return &s.Players[i+1]
+		}
 	}
 
-	if i == len(s.Players)-1 {
-		return &s.Players[0]
-	}
-
-	return &s.Players[i+1]
+	return nil
 }
 
 // RandomPlayer returns a random `Match.Players` from

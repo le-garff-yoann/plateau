@@ -16,6 +16,7 @@ func TestGameRuntime(t *testing.T) {
 	}
 
 	SetupTestMatchRuntime(t, testMatchRuntime)
+	defer testMatchRuntime.Stop()
 
 	testMatchRuntime.TestRequest("foo", protocol.ReqListRequests, protocol.ResOK)
 	testMatchRuntime.TestRequest("foo", protocol.ReqPlayerWantToJoin, protocol.ResOK)

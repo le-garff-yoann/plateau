@@ -21,6 +21,11 @@ func TestGetMatchIDsHandlerHandler(t *testing.T) {
 	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
+	require.NoError(t, srv.store.Open())
+	defer func() {
+		require.NoError(t, srv.store.Close())
+	}()
+
 	h := http.Handler(srv.router.Get("getMatchIDs").GetHandler())
 
 	req, err := http.NewRequest("GET", "", nil)
@@ -40,7 +45,8 @@ func TestGetMatchIDsHandlerHandler(t *testing.T) {
 
 	trn := srv.store.BeginTransaction()
 
-	id, _ := trn.MatchCreate(protocol.Match{})
+	id, err := trn.MatchCreate(protocol.Match{})
+	require.NoError(t, err)
 	trn.Commit()
 
 	rr = newRecorder()
@@ -117,6 +123,11 @@ func TestCreateAndReadMatchHandler(t *testing.T) {
 	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
+	require.NoError(t, srv.store.Open())
+	defer func() {
+		require.NoError(t, srv.store.Close())
+	}()
+
 	testCreateAndReadMatchHandler(t, srv)
 }
 
@@ -125,6 +136,11 @@ func TestMatchPlayersNameHandler(t *testing.T) {
 
 	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
+
+	require.NoError(t, srv.store.Open())
+	defer func() {
+		require.NoError(t, srv.store.Close())
+	}()
 
 	var (
 		h = http.Handler(srv.router.Get("getMatchPlayersName").GetHandler())
@@ -137,7 +153,7 @@ func TestMatchPlayersNameHandler(t *testing.T) {
 
 	trn := srv.store.BeginTransaction()
 
-	trn.MatchPlayerJoins(match.ID, player.Name)
+	require.NoError(t, trn.MatchPlayerJoins(match.ID, player.Name))
 	trn.Commit()
 
 	req, err := http.NewRequest("GET", "", nil)
@@ -161,6 +177,11 @@ func TestMatchDealsHandler(t *testing.T) {
 	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
+	require.NoError(t, srv.store.Open())
+	defer func() {
+		require.NoError(t, srv.store.Close())
+	}()
+
 	var (
 		h = http.Handler(srv.router.Get("getMatchDeals").GetHandler())
 
@@ -170,7 +191,7 @@ func TestMatchDealsHandler(t *testing.T) {
 		trn = srv.store.BeginTransaction()
 	)
 
-	trn.MatchCreateDeal(match.ID, protocol.Deal{})
+	require.NoError(t, trn.MatchCreateDeal(match.ID, protocol.Deal{}))
 	trn.Commit()
 
 	_, loginRecorder := testRegisterAndLoginHandlers(t, srv, player.Name, player.Password)
@@ -198,6 +219,11 @@ func TestStreamMatchNotificationsHandler(t *testing.T) {
 
 	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
+
+	require.NoError(t, srv.store.Open())
+	defer func() {
+		require.NoError(t, srv.store.Close())
+	}()
 
 	match := testCreateAndReadMatchHandler(t, srv)
 	_, loginRecorder := testRegisterAndLoginHandlers(t, srv, "foo", "bar")
@@ -287,7 +313,7 @@ func TestStreamMatchNotificationsHandler(t *testing.T) {
 
 	trn := srv.store.BeginTransaction()
 
-	trn.MatchEndedAt(match.ID, time.Now())
+	require.NoError(t, trn.MatchEndedAt(match.ID, time.Now()))
 	trn.Commit()
 
 	require.Equal(t, http.StatusGone, newRecorder(false).Code)
@@ -298,6 +324,11 @@ func TestPatchMatchHandler(t *testing.T) {
 
 	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
+
+	require.NoError(t, srv.store.Open())
+	defer func() {
+		require.NoError(t, srv.store.Close())
+	}()
 
 	match := testCreateAndReadMatchHandler(t, srv)
 

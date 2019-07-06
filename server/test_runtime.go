@@ -44,30 +44,38 @@ func (s *TestMatchRuntime) TestRequest(playerName string, req protocol.Request, 
 	)
 }
 
-// Stop destroys the `matchRuntime` and stop the `Server`.
+// Stop destroys the `matchRuntime` and closes the `store.Store` of the `Server`.
 func (s *TestMatchRuntime) Stop() {
 	s.srv.unguardRuntime(s.Match.ID)
 	s.MatchRuntime = nil
 
-	s.srv.Stop()
+	require.NoError(s.T, s.Store().Close())
 }
 
 // SetupTestMatchRuntime initializes *testMatchRuntime* with a `Server`,
-// a `protocol.Match`, a slice of `protocol.Player` and a `matchRuntime`.
+// an `inmemory.Store`, a `protocol.Match`, a slice of `protocol.Player`
+// and a `matchRuntime`.
+//
+// Note that this function will not start the `Server`.
 func SetupTestMatchRuntime(t *testing.T, testMatchRuntime *TestMatchRuntime) {
 	var err error
 	testMatchRuntime.srv, err = New(testMatchRuntime.Game, &inmemory.Store{})
 	require.NoError(t, err)
 
+	require.NoError(t, testMatchRuntime.Store().Open())
+
 	trn := testMatchRuntime.Store().BeginTransaction()
 
-	id, _ := trn.MatchCreate(testMatchRuntime.Match)
+	id, err := trn.MatchCreate(testMatchRuntime.Match)
+	require.NoError(t, err)
 
 	for _, pName := range testMatchRuntime.PlayersName {
-		trn.PlayerCreate(protocol.Player{Name: pName})
+		require.NoError(t, trn.PlayerCreate(protocol.Player{Name: pName}))
 	}
 
-	m, _ := trn.MatchRead(id)
+	m, err := trn.MatchRead(id)
+	require.NoError(t, err)
+
 	testMatchRuntime.Match = *m
 
 	trn.Commit()

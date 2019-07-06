@@ -28,7 +28,7 @@ type Server struct {
 	doneWg          sync.WaitGroup
 }
 
-// New returns a new `Server`. It initializes the `Game` and opens the `store.Store`.
+// New initializes the `Game` *gm* and returns a new `Server`.
 func New(gm Game, str store.Store) (*Server, error) {
 	s := &Server{
 		game:            gm,
@@ -38,10 +38,6 @@ func New(gm Game, str store.Store) (*Server, error) {
 	}
 
 	if err := gm.Init(); err != nil {
-		return nil, err
-	}
-
-	if err := str.Open(); err != nil {
 		return nil, err
 	}
 
@@ -141,6 +137,10 @@ func Init(listener, listenerStaticDir string, gm Game, str store.Store) (*Server
 
 // Start starts the server.
 func (s *Server) Start() error {
+	if err := s.store.Open(); err != nil {
+		return err
+	}
+
 	go s.doneBroadcaster.Run()
 
 	s.doneWg.Add(1)

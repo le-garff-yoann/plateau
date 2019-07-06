@@ -5,25 +5,18 @@
 ```bash
 . helpers.bash
 
-set -e
-
 new_plateau mygame # Create ~/mygame/
 ```
 
-## It's now yours!
+## It's now yours to modify!
 
-### Let's code
-
-Your game logic should preferably stand in `~/mygame/game/mygame/`. It must implement the [`plateau/server.Game`](server/game.go) interface.
+Your game logic should preferably stand in `~/mygame/game/mygame/`.
+It must implement the [`plateau/server.Game`](server/game.go) interface.
 
 ### Useful godoc
 
-```bash
-go doc plateau/server.Game
-go doc plateau/server.TestMatchRuntime
-go doc plateau/server.Context
-
-go doc plateau/store.Transaction
-
-go doc -all plateau/protocol
-```
+- `plateau/server.Game`
+- `plateau/server.TestMatchRuntime`
+- `plateau/server.Context`
+- `plateau/store.Transaction`
+- `plateau/protocol`

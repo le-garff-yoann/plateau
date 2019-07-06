@@ -6,12 +6,19 @@ new_plateau() {
         return 1
     fi
 
+    if [[ -d ~/$1 ]]
+    then
+        echo "~/$1/ already exists"
+
+        return 1
+    fi
+
     echo "Creation of the new project $1..."
 
-    echo "Copy from $PWD to ~/$1"
+    echo "Copy from $PWD to ~/$1/"
     cp -r $PWD ~/$1
 
-    pushd ~/$1
+    pushd ~/$1 || return 1
 
     cat > cmd/run_$1.go <<EOF
 // +build run_$1
@@ -147,6 +154,7 @@ func TestGameRuntime(t *testing.T) {
 	}
 
 	server.SetupTestMatchRuntime(t, testMatchRuntime)
+    defer testMatchRuntime.Stop()
 
 	testMatchRuntime.TestRequest("foo", protocol.ReqPlayerWantToJoin, protocol.ResOK)
 	testMatchRuntime.TestRequest("bar", protocol.ReqPlayerWantToJoin, protocol.ResOK)
@@ -170,7 +178,7 @@ EOF
     echo "Done"
 }
 
-_t2pg_req() {
+_tpg_req() {
     [[ ! $(which curl jq) || -z $1 ]] && return 1 
 
     local \
@@ -193,38 +201,44 @@ _t2pg_req() {
     [[ ${PIPESTATUS[0]} -eq 0 ]]
 }
 
-t2pg_cleanup() {
+tpg_cleanup() {
     [[ -z $1 ]] && return 1
 
     rm -f $1.cookie
 }
 
-t2pg_match() {
+tpg_match() {
     [[ -z $1 ]] && return 1
 
-    _t2pg_req $1 /
+    _tpg_req $1 /
 }
 
-t2pg_deals() {
+tpg_deals() {
     [[ -z $1 ]] && return 1
 
-    _t2pg_req $1 /deals
+    _tpg_req $1 /deals
 }
 
-t2pg_send() {
+tpg_send() {
     [[ -z $1 || -z $2 ]] && return 1
 
-    _t2pg_req $1 / -X PATCH -d "{\"request\":\"$2\"}"
+    _tpg_req $1 / -X PATCH -d "{\"request\":\"$2\"}"
 }
 
-t2pg_setupmatch() {
-    [[ -z $1 || -z $2 ]] && return 1 
+tpg_setupmatch() {
+    [[ -z $1 ]] && return 1 
 
-    (
-        t2pg_send $1 PLAYER_WANT_TO_JOIN && \
-        t2pg_send $2 PLAYER_WANT_TO_JOIN && \
-        t2pg_send $2 PLAYER_WANT_TO_START_THE_MATCH && \
-        t2pg_send $2 PLAYER_ACCEPTS && \
-        t2pg_send $1 PLAYER_ACCEPTS
-    ) 1>/dev/null && echo "Done"
+    for p in "$@"
+    do
+        tpg_send $p PLAYER_WANT_TO_JOIN || return 1
+    done
+
+    tpg_send $1 PLAYER_WANT_TO_START_THE_MATCH || return 1
+
+    for p in "$@"
+    do
+        tpg_send $p PLAYER_ACCEPTS || return 1
+    done
+
+    echo "Done"
 }

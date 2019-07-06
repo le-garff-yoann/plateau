@@ -15,7 +15,11 @@ func TestMatchCreateAndList(t *testing.T) {
 	t.Parallel()
 
 	s := &Store{}
-	s.Open()
+
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
@@ -36,13 +40,18 @@ func TestMatchRead(t *testing.T) {
 	t.Parallel()
 
 	s := &Store{}
-	s.Open()
+
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
-	id, _ := trn.MatchCreate(protocol.Match{})
+	id, err := trn.MatchCreate(protocol.Match{})
+	require.NoError(t, err)
 
-	_, err := uuid.FromString(id)
+	_, err = uuid.FromString(id)
 	require.NoError(t, err)
 
 	m, err := trn.MatchRead(id)
@@ -57,16 +66,22 @@ func TestMatchEndedAt(t *testing.T) {
 	t.Parallel()
 
 	s := &Store{}
-	s.Open()
+
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
-	id, _ := trn.MatchCreate(protocol.Match{})
-
-	err := trn.MatchEndedAt(id, time.Now())
+	id, err := trn.MatchCreate(protocol.Match{})
 	require.NoError(t, err)
 
-	m, _ := trn.MatchRead(id)
+	err = trn.MatchEndedAt(id, time.Now())
+	require.NoError(t, err)
+
+	m, err := trn.MatchRead(id)
+	require.NoError(t, err)
 	require.NotNil(t, id, m.EndedAt)
 
 	require.IsType(t, store.DontExistError(""),
@@ -82,16 +97,21 @@ func TestMatchCreateDeal(t *testing.T) {
 		deal = protocol.Deal{Holder: protocol.Player{Name: "foo"}}
 	)
 
-	s.Open()
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
-	id, _ := trn.MatchCreate(protocol.Match{})
-
-	err := trn.MatchCreateDeal(id, deal)
+	id, err := trn.MatchCreate(protocol.Match{})
 	require.NoError(t, err)
 
-	m, _ := trn.MatchRead(id)
+	err = trn.MatchCreateDeal(id, deal)
+	require.NoError(t, err)
+
+	m, err := trn.MatchRead(id)
+	require.NoError(t, err)
 	require.Len(t, m.Deals, 1)
 	require.Equal(t, deal.Holder.Name, m.Deals[0].Holder.Name)
 
@@ -108,25 +128,31 @@ func TestMatchUpdateCurrentDealHolder(t *testing.T) {
 		deal = protocol.Deal{Holder: protocol.Player{Name: "foo", Wins: 1}}
 	)
 
-	s.Open()
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
-	id, _ := trn.MatchCreate(protocol.Match{})
-
-	trn.MatchCreateDeal(id, deal)
-
-	err := trn.MatchUpdateCurrentDealHolder(id, "bar")
+	id, err := trn.MatchCreate(protocol.Match{})
 	require.NoError(t, err)
 
-	m, _ := trn.MatchRead(id)
+	require.NoError(t, trn.MatchCreateDeal(id, deal))
+
+	err = trn.MatchUpdateCurrentDealHolder(id, "bar")
+	require.NoError(t, err)
+
+	m, err := trn.MatchRead(id)
+	require.NoError(t, err)
 	require.Len(t, m.Deals, 1)
 	require.Equal(t, "bar", m.Deals[0].Holder.Name)
 
 	err = trn.MatchUpdateCurrentDealHolder(id, "foo")
 	require.NoError(t, err)
 
-	m, _ = trn.MatchRead(id)
+	m, err = trn.MatchRead(id)
+	require.NoError(t, err)
 	require.Len(t, m.Deals, 1)
 	require.Equal(t, "foo", m.Deals[0].Holder.Name)
 	require.Equal(t, uint(1), m.Deals[0].Holder.Wins)
@@ -139,15 +165,21 @@ func TestMatchPlayerJoins(t *testing.T) {
 	t.Parallel()
 
 	s := &Store{}
-	s.Open()
+
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
-	id, _ := trn.MatchCreate(protocol.Match{NumberOfPlayersRequired: 2})
+	id, err := trn.MatchCreate(protocol.Match{NumberOfPlayersRequired: 2})
+	require.NoError(t, err)
 
 	require.NoError(t, trn.MatchPlayerJoins(id, "foo"))
 
-	m, _ := trn.MatchRead(id)
+	m, err := trn.MatchRead(id)
+	require.NoError(t, err)
 	require.Equal(t, "foo", m.Players[0].Name)
 
 	require.IsType(t, store.PlayerParticipationError(""),
@@ -162,17 +194,23 @@ func TestMatchPlayerLeaves(t *testing.T) {
 	t.Parallel()
 
 	s := &Store{}
-	s.Open()
+
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
-	id, _ := trn.MatchCreate(protocol.Match{NumberOfPlayersRequired: 1})
+	id, err := trn.MatchCreate(protocol.Match{NumberOfPlayersRequired: 1})
+	require.NoError(t, err)
 
 	require.NoError(t, trn.MatchPlayerJoins(id, "foo"))
 
 	require.NoError(t, trn.MatchPlayerLeaves(id, "foo"))
 
-	m, _ := trn.MatchRead(id)
+	m, err := trn.MatchRead(id)
+	require.NoError(t, err)
 	require.Empty(t, m.Players)
 
 	require.IsType(t, store.PlayerParticipationError(""),

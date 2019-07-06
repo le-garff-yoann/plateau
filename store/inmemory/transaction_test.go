@@ -12,7 +12,11 @@ func TestBeginTransactionCommit(t *testing.T) {
 	t.Parallel()
 
 	s := &Store{}
-	s.Open()
+
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
@@ -39,7 +43,11 @@ func TestBeginTransactionAbort(t *testing.T) {
 	t.Parallel()
 
 	s := &Store{}
-	s.Open()
+
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 

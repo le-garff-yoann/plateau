@@ -26,11 +26,16 @@ func TestCreateDealsChangeIterator(t *testing.T) {
 	t.Parallel()
 
 	s := &Store{}
-	s.Open()
+
+	require.NoError(t, s.Open())
+	defer func() {
+		require.NoError(t, s.Close())
+	}()
 
 	trn := s.BeginTransaction()
 
-	id, _ := trn.MatchCreate(protocol.Match{})
+	id, err := trn.MatchCreate(protocol.Match{})
+	require.NoError(t, err)
 
 	itr, err := s.CreateDealsChangeIterator(id)
 	require.NoError(t, err)
@@ -82,7 +87,8 @@ func TestCreateDealsChangeIterator(t *testing.T) {
 	require.Len(t, receivedDealChanges[3].Old.Messages, 1)
 	require.Len(t, receivedDealChanges[3].New.Messages, 2)
 
-	m, _ := trn.MatchRead(id)
+	m, err := trn.MatchRead(id)
+	require.NoError(t, err)
 
 	require.Len(t, m.Deals, 2)
 	require.Len(t, protocol.IndexDeals(m.Deals, 0).Messages, 2)

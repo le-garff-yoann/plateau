@@ -14,11 +14,11 @@ const (
 	// ResForbidden means that the associated
 	// `Request` is fordidden.
 	ResForbidden Response = "FORBIDDEN"
-	// ResInternalError means that the request generated
-	// an unexpected server-side error.
+	// ResInternalError means that the associated
+	// `Request` generated an unexpected server-side error.
 	ResInternalError Response = "INTERNAL_ERROR"
-	// ResNotImplemented means that the request
-	// is not recognized.
+	// ResNotImplemented that the associated
+	// `Request` is not recognized.
 	ResNotImplemented Response = "NOT_IMPLEMENTED"
 )
 

@@ -16,6 +16,11 @@ func TestGetGameDefinitionHandler(t *testing.T) {
 	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
+	require.NoError(t, srv.store.Open())
+	defer func() {
+		require.NoError(t, srv.store.Close())
+	}()
+
 	h := http.Handler(srv.router.Get("readGame").GetHandler())
 
 	req, err := http.NewRequest("GET", "", nil)

@@ -1,7 +1,5 @@
 package protocol
 
-import funk "github.com/thoas/go-funk"
-
 // Message represents a change, an action
 // or other within a `Deal`.
 type Message struct {
@@ -19,9 +17,17 @@ func (s *Message) Concealed(playerName ...string) *Message {
 			msg = Message{}
 
 			allowed = func(names []string) bool {
-				return len(playerName) == 0 || names == nil || funk.Find(names, func(name string) bool {
-					return name == playerName[0]
-				}) != nil
+				if len(playerName) > 0 && len(names) > 0 {
+					for _, name := range names {
+						if name == playerName[0] {
+							return true
+						}
+					}
+
+					return false
+				}
+
+				return true
 			}
 		)
 

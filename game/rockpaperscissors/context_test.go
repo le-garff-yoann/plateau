@@ -19,6 +19,7 @@ func TestGameRuntime(t *testing.T) {
 	}
 
 	server.SetupTestMatchRuntime(t, testMatchRuntime)
+	defer testMatchRuntime.Stop()
 
 	testMatchRuntime.TestRequest("foo", protocol.ReqPlayerWantToJoin, protocol.ResOK)
 	testMatchRuntime.TestRequest("bar", protocol.ReqPlayerWantToJoin, protocol.ResOK)
@@ -32,7 +33,8 @@ func TestGameRuntime(t *testing.T) {
 
 		trn := testMatchRuntime.Store().BeginTransaction()
 
-		match, _ := trn.MatchRead(testMatchRuntime.Match.ID)
+		match, err := trn.MatchRead(testMatchRuntime.Match.ID)
+		require.NoError(t, err)
 		trn.Abort()
 
 		initialHolder := protocol.IndexDeals(match.Deals, 0).Holder
@@ -42,7 +44,8 @@ func TestGameRuntime(t *testing.T) {
 
 		trn = testMatchRuntime.Store().BeginTransaction()
 
-		match, _ = trn.MatchRead(testMatchRuntime.Match.ID)
+		match, err = trn.MatchRead(testMatchRuntime.Match.ID)
+		require.NoError(t, err)
 		trn.Abort()
 
 		currentDeal := protocol.IndexDeals(match.Deals, 0).WithMessagesConcealed(match.NextPlayer(initialHolder).Name)
@@ -52,7 +55,8 @@ func TestGameRuntime(t *testing.T) {
 
 		trn = testMatchRuntime.Store().BeginTransaction()
 
-		match, _ = trn.MatchRead(testMatchRuntime.Match.ID)
+		match, err = trn.MatchRead(testMatchRuntime.Match.ID)
+		require.NoError(t, err)
 		trn.Abort()
 
 		return match

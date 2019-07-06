@@ -14,16 +14,13 @@
 
 ## Let's go
 
-**The code in this repository will build the binary for the [Rock–paper–scissors](https://en.wikipedia.org/wiki/Rock%E2%80%93paper%E2%80%93scissors) game.**
+The code in this repository will build the binary for the [Rock–paper–scissors](https://en.wikipedia.org/wiki/Rock%E2%80%93paper%E2%80%93scissors) game.
 
 **Please read [these instructions](CUSTOMIZING.md) is you want to customize *plateau* for another game.**
 
 ```bash
 # Build to use the process memory as the store.
 go build -tags="run_rockpaperscissors run_inmemory" -o dist/plateau 
- 
-# plateau help # Print the global help.
-# plateau help run # Print the help for the run subcommand.
 
 # Start the server.
 dist/plateau run -l :3000 --session-key my-STRONG-secret
@@ -32,8 +29,6 @@ dist/plateau run -l :3000 --session-key my-STRONG-secret
 **N.B.** Parameters to the `run` subcommand may vary function of the flags declared by `store.RunCommandSetter(*cobra.Command)` (and thus by the implementation of `store.Store`).
 
 ## A quick look at the API
-
-### Got yourself a session
 
 ```bash
 BASE=http://localhost:3000
@@ -46,28 +41,13 @@ curl $BASE/user/register -d $USERINFO
 
 # Log in.
 curl $BASE/user/login --cookie-jar $COOKIE_FILE -d $USERINFO
-```
 
-### Play!
-
-```bash
 # Create and return a match.
-match_id=$(
 curl -b $COOKIE_FILE -X POST $BASE/api/matchs \
-    -d '{"number_of_players_required":2}' \
-    | jq -r .id
-)
-
-# Listen for changes.
-curl -b $COOKIE_FILE \
-    $BASE/api/matchs/$match_id/notifications &
-
-# Read or modify the state of the match with an in-game request.
-curl -b $COOKIE_FILE -X PATCH $BASE/api/matchs/$match_id \
-    -d '{"request":"?"}'
+    -d '{"number_of_players_required":2}'
 ```
 
-## Test a 2-player game in a shell (t2pg)
+## Test Rock–paper–scissors
 
 ```bash
 . helpers.bash
