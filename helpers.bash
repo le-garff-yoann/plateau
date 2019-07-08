@@ -154,7 +154,9 @@ func TestGameRuntime(t *testing.T) {
 	}
 
 	server.SetupTestMatchRuntime(t, testMatchRuntime)
-    defer testMatchRuntime.Stop()
+	defer func() {
+	    require.NoError(t, testMatchRuntime.Stop())
+	}()
 
 	testMatchRuntime.TestRequest("foo", protocol.ReqPlayerWantToJoin, protocol.ResOK)
 	testMatchRuntime.TestRequest("bar", protocol.ReqPlayerWantToJoin, protocol.ResOK)
