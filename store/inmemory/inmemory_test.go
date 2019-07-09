@@ -13,12 +13,12 @@ func TestInMemory(t *testing.T) {
 	inm := &inMemory{}
 
 	inm.Players = append(inm.Players, &protocol.Player{Name: "foo"})
-	require.NotNil(t, inm.player("foo"))
-	require.Nil(t, inm.player("bar"))
+	require.NotNil(t, inm.Player("foo"))
+	require.Nil(t, inm.Player("bar"))
 
 	inm.Matchs = append(inm.Matchs, &match{ID: "foo"})
-	require.NotNil(t, inm.match("foo"))
-	require.Nil(t, inm.match("bar"))
+	require.NotNil(t, inm.Match("foo"))
+	require.Nil(t, inm.Match("bar"))
 
-	require.IsType(t, inm, inm.copy())
+	require.IsType(t, inm, inm.Copy())
 }

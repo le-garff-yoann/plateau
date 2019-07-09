@@ -77,33 +77,21 @@ func testCreateAndReadMatchHandler(t *testing.T, srv *Server) *protocol.Match {
 
 	require.Equal(t, http.StatusNotFound, newRecorder(readH, req).Code)
 
-	// TODO-1: Test for number_of_players_required at 0, 1 and 3.
-	// func TestIsMatchValid(t *testing.T) {
-	// 	t.Parallel()
-
-	// 	g := Game{}
-	// 	g.Init()
-
-	// 	require.NoError(t, g.IsMatchValid(&protocol.Match{NumberOfPlayersRequired: 2}))
-
-	// 	require.Error(t, g.IsMatchValid(&protocol.Match{}))
-
-	// 	require.Error(t, g.IsMatchValid(&protocol.Match{NumberOfPlayersRequired: 0}))
-	// 	require.Error(t, g.IsMatchValid(&protocol.Match{NumberOfPlayersRequired: 1}))
-
-	// 	for i := 3; i < 10000; i++ {
-	// 		require.Error(t, g.IsMatchValid(&protocol.Match{NumberOfPlayersRequired: uint(i)}))
-	// 	}
-	// }
-
-	req, err = http.NewRequest("POST", "", strings.NewReader(`{"number_of_players_required":2}`))
-	require.NoError(t, err)
-
-	res := newRecorder(createH, req)
-	require.Equal(t, http.StatusCreated, res.Code)
-
 	var match protocol.Match
-	require.NoError(t, json.NewDecoder(res.Body).Decode(&match))
+	for i := 0; i < 4; i++ {
+		req, err := http.NewRequest("POST", "", strings.NewReader(fmt.Sprintf(`{"number_of_players_required":%d}`, i)))
+		require.NoError(t, err)
+
+		res := newRecorder(createH, req)
+
+		if i == 2 {
+			require.Equal(t, http.StatusCreated, res.Code)
+
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&match))
+		} else {
+			require.Equal(t, http.StatusBadRequest, res.Code)
+		}
+	}
 
 	req, err = http.NewRequest("GET", "", nil)
 	require.NoError(t, err)

@@ -61,8 +61,7 @@ func (s *match) toProtocolStruct(pPlayers []*protocol.Player) *protocol.Match {
 	}
 
 	for pName, p := range s.Players {
-		pp, ok := pPlayersMap[pName]
-		if ok {
+		if pp, ok := pPlayersMap[pName]; ok {
 			players = append(players, pp)
 		} else {
 			players = append(players, p)
@@ -121,7 +120,7 @@ func (s *Transaction) MatchRead(id string) (_ *protocol.Match, err error) {
 		}
 	}()
 
-	m := s.inMemoryCopy.match(id)
+	m := s.inMemoryCopy.Match(id)
 	if m == nil {
 		return nil, store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
@@ -140,7 +139,7 @@ func (s *Transaction) MatchEndedAt(id string, val time.Time) (err error) {
 		}
 	}()
 
-	m := s.inMemoryCopy.match(id)
+	m := s.inMemoryCopy.Match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
@@ -157,7 +156,7 @@ func (s *Transaction) MatchCreateDeal(id string, deal protocol.Deal) (err error)
 			s.errors = append(s.errors, err)
 		}
 	}()
-	m := s.inMemoryCopy.match(id)
+	m := s.inMemoryCopy.Match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
@@ -177,7 +176,7 @@ func (s *Transaction) MatchUpdateCurrentDealHolder(id, newHolderName string) (er
 		}
 	}()
 
-	m := s.inMemoryCopy.match(id)
+	m := s.inMemoryCopy.Match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
@@ -203,7 +202,7 @@ func (s *Transaction) MatchAddMessageToCurrentDeal(id string, message protocol.M
 		}
 	}()
 
-	m := s.inMemoryCopy.match(id)
+	m := s.inMemoryCopy.Match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
@@ -230,7 +229,7 @@ func (s *Transaction) MatchPlayerJoins(id, name string) (err error) {
 		}
 	}()
 
-	m := s.inMemoryCopy.match(id)
+	m := s.inMemoryCopy.Match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
@@ -239,8 +238,7 @@ func (s *Transaction) MatchPlayerJoins(id, name string) (err error) {
 		return store.PlayerParticipationError(fmt.Sprintf(`There are no more spot in match %s`, id))
 	}
 
-	_, ok := m.Players[name]
-	if ok {
+	if _, ok := m.Players[name]; ok {
 		return store.PlayerParticipationError(fmt.Sprintf(`The player "%s" is already in the match %s`, name, id))
 	}
 
@@ -257,13 +255,12 @@ func (s *Transaction) MatchPlayerLeaves(id, name string) (err error) {
 		}
 	}()
 
-	m := s.inMemoryCopy.match(id)
+	m := s.inMemoryCopy.Match(id)
 	if m == nil {
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
 
-	_, ok := m.Players[name]
-	if !ok {
+	if _, ok := m.Players[name]; !ok {
 		return store.PlayerParticipationError(fmt.Sprintf(`The player "%s" is already out of the match %s`, name, id))
 	}
 

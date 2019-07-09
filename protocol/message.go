@@ -11,8 +11,7 @@ type Message struct {
 // Concealed convert itself into a "normal" message if the *Payload*
 // is assertable to `ConcealedMessagePayload`.
 func (s *Message) Concealed(playerName ...string) *Message {
-	concealedPayload, ok := s.Payload.(ConcealedMessagePayload)
-	if ok {
+	if concealedPayload, ok := s.Payload.(ConcealedMessagePayload); ok {
 		var (
 			msg = Message{}
 

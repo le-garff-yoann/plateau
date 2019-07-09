@@ -18,6 +18,6 @@ type Store interface {
 
 	Sessions() sessions.Store
 
-	BeginTransaction() Transaction
+	BeginTransaction(...TransactionScope) Transaction
 	CreateDealsChangeIterator(id string) (DealChangeIterator, error)
 }

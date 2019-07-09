@@ -70,9 +70,11 @@ func (s *Server) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	player := protocol.Player{Name: cred.Username, Password: string(hPassword)}
+
 	trn := s.store.BeginTransaction()
 
-	if err := trn.PlayerCreate(protocol.Player{Name: cred.Username, Password: string(hPassword)}); err != nil {
+	if err := trn.PlayerCreate(player); err != nil {
 		trn.Abort()
 
 		if _, ok := err.(store.DuplicateError); ok {

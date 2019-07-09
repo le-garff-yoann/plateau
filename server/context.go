@@ -72,8 +72,7 @@ func (s *Context) Complete(ctx *Context) *Context {
 	}
 
 	for r, handlerFunc := range ctx.handlers {
-		_, ok := s.handlers[r]
-		if !ok {
+		if _, ok := s.handlers[r]; !ok {
 			s.On(r, handlerFunc)
 		}
 	}
@@ -88,8 +87,7 @@ func (s *Context) handle(reqContainer *protocol.RequestContainer) *protocol.Resp
 		}
 	}
 
-	handlerFunc, ok := s.handlers[reqContainer.Request]
-	if ok {
+	if handlerFunc, ok := s.handlers[reqContainer.Request]; ok {
 		res := handlerFunc(reqContainer)
 
 		if s.afterHandler != nil {

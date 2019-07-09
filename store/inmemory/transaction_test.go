@@ -27,7 +27,7 @@ func TestBeginTransactionCommit(t *testing.T) {
 	require.NoError(t, err)
 
 	require.False(t, trn.Closed())
-	trn.Commit()
+	require.NotPanics(t, func() { trn.Commit() })
 	require.Panics(t, func() { trn.Commit() })
 	require.Panics(t, func() { trn.Abort() })
 
@@ -37,6 +37,7 @@ func TestBeginTransactionCommit(t *testing.T) {
 
 	_, err = trn.MatchRead(id)
 	require.NoError(t, err)
+	require.NotPanics(t, func() { trn.Commit() })
 }
 
 func TestBeginTransactionAbort(t *testing.T) {

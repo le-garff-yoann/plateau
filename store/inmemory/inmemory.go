@@ -11,7 +11,7 @@ type inMemory struct {
 	Matchs  []*match
 }
 
-func (s *inMemory) player(name string) (player *protocol.Player) {
+func (s *inMemory) Player(name string) (player *protocol.Player) {
 	for _, p := range s.Players {
 		if p.Name == name {
 			player = p
@@ -23,7 +23,7 @@ func (s *inMemory) player(name string) (player *protocol.Player) {
 	return player
 }
 
-func (s *inMemory) match(id string) (match *match) {
+func (s *inMemory) Match(id string) (match *match) {
 	for _, m := range s.Matchs {
 		if m.ID == id {
 			match = m
@@ -35,7 +35,7 @@ func (s *inMemory) match(id string) (match *match) {
 	return match
 }
 
-func (s *inMemory) copy() *inMemory {
+func (s *inMemory) Copy() *inMemory {
 	var inMemoryCopy inMemory
 	deepcopier.Copy(s).To(&inMemoryCopy)
 

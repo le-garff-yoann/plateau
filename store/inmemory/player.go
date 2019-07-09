@@ -50,7 +50,7 @@ func (s *Transaction) PlayerRead(name string) (_ *protocol.Player, err error) {
 		}
 	}()
 
-	p := s.inMemoryCopy.player(name)
+	p := s.inMemoryCopy.Player(name)
 	if p == nil {
 		return nil, store.DontExistError(fmt.Sprintf(`The player %s doesn't exist`, name))
 	}
@@ -69,7 +69,7 @@ func (s *Transaction) PlayerIncreaseWins(name string, increase uint) (err error)
 		}
 	}()
 
-	p := s.inMemoryCopy.player(name)
+	p := s.inMemoryCopy.Player(name)
 	if p == nil {
 		return store.DontExistError(fmt.Sprintf(`The player %s doesn't exist`, name))
 	}
@@ -87,7 +87,7 @@ func (s *Transaction) PlayerIncreaseLoses(name string, increase uint) (err error
 		}
 	}()
 
-	p := s.inMemoryCopy.player(name)
+	p := s.inMemoryCopy.Player(name)
 	if p == nil {
 		return store.DontExistError(fmt.Sprintf(`The player %s doesn't exist`, name))
 	}
@@ -105,7 +105,7 @@ func (s *Transaction) PlayerIncreaseTies(name string, increase uint) (err error)
 		}
 	}()
 
-	p := s.inMemoryCopy.player(name)
+	p := s.inMemoryCopy.Player(name)
 	if p == nil {
 		return store.DontExistError(fmt.Sprintf(`The player %s doesn't exist`, name))
 	}

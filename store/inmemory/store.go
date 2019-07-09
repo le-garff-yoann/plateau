@@ -14,7 +14,7 @@ var sessionKey string
 
 // Store implements the `store.Store` interface.
 type Store struct {
-	trnMux sync.Mutex
+	inMemoryMux sync.Mutex
 
 	inMemory               *inMemory
 	dealChangesBroadcaster *broadcaster.Broadcaster
@@ -56,12 +56,12 @@ func (s *Store) Sessions() sessions.Store {
 }
 
 // BeginTransaction implements the `store.Store` interface.
-func (s *Store) BeginTransaction() store.Transaction {
-	s.trnMux.Lock()
+func (s *Store) BeginTransaction(scopes ...store.TransactionScope) store.Transaction {
+	s.inMemoryMux.Lock()
 
 	return &Transaction{
 		inMemory:     s.inMemory,
-		inMemoryCopy: s.inMemory.copy(),
+		inMemoryCopy: s.inMemory.Copy(),
 		dealChangeSubmitter: func(dealChange *store.DealChange) {
 			var dealChangeCopy store.DealChange
 			deepcopier.Copy(dealChange).To(&dealChangeCopy)
@@ -69,6 +69,6 @@ func (s *Store) BeginTransaction() store.Transaction {
 			s.dealChangesBroadcaster.Submit(dealChangeCopy)
 		},
 		closed: false,
-		done:   func() { s.trnMux.Unlock() },
+		done:   func() { s.inMemoryMux.Unlock() },
 	}
 }
