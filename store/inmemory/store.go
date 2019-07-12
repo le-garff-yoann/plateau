@@ -17,7 +17,7 @@ type Store struct {
 	inMemoryMux sync.Mutex
 
 	inMemory               *inMemory
-	dealChangesBroadcaster *broadcaster.Broadcaster
+	dealsChangeBroadcaster *broadcaster.Broadcaster
 
 	sessionStore sessions.Store
 }
@@ -26,8 +26,8 @@ type Store struct {
 func (s *Store) Open() error {
 	s.inMemory = &inMemory{}
 
-	s.dealChangesBroadcaster = broadcaster.New()
-	go s.dealChangesBroadcaster.Run()
+	s.dealsChangeBroadcaster = broadcaster.New()
+	go s.dealsChangeBroadcaster.Run()
 
 	s.sessionStore = sessions.NewCookieStore([]byte([]byte(sessionKey)))
 
@@ -36,7 +36,7 @@ func (s *Store) Open() error {
 
 // Close implements the `store.Store` interface.
 func (s *Store) Close() error {
-	s.dealChangesBroadcaster.Done()
+	s.dealsChangeBroadcaster.Done()
 
 	return nil
 }
@@ -62,11 +62,11 @@ func (s *Store) BeginTransaction(scopes ...store.TransactionScope) store.Transac
 	return &Transaction{
 		inMemory:     s.inMemory,
 		inMemoryCopy: s.inMemory.Copy(),
-		dealChangeSubmitter: func(dealChange *store.DealChange) {
-			var dealChangeCopy store.DealChange
+		dealChangeSubmitter: func(dealChange *store.DealsChange) {
+			var dealChangeCopy store.DealsChange
 			deepcopier.Copy(dealChange).To(&dealChangeCopy)
 
-			s.dealChangesBroadcaster.Submit(dealChangeCopy)
+			s.dealsChangeBroadcaster.Submit(dealChangeCopy)
 		},
 		closed: false,
 		done:   func() { s.inMemoryMux.Unlock() },

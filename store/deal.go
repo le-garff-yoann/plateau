@@ -2,18 +2,18 @@ package store
 
 import "plateau/protocol"
 
-// DealChange represents the difference between
+// DealsChange represents the difference between
 // the old and the new state of the same `protocol.Deal`.
-type DealChange struct {
-	Old *protocol.Deal
-	New *protocol.Deal
+type DealsChange struct {
+	Old *protocol.Deal `json:"old"`
+	New *protocol.Deal `json:"new"`
 }
 
-// DealChangeIterator represents the iterator in its most classical form.
+// DealsChangeIterator represents the iterator in its most classical form.
 // He is specialized to return only the `protocol.Deal`.
 //	- `Next()` fetches the next deal.
 //	- `Close()` closes the iterator and stops calls to `Next()`.
-type DealChangeIterator interface {
-	Next(*DealChange) bool
+type DealsChangeIterator interface {
+	Next(*DealsChange) bool
 	Close() error
 }

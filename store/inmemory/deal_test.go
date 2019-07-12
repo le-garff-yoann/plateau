@@ -47,16 +47,16 @@ func TestCreateDealsChangeIterator(t *testing.T) {
 			protocol.Deal{Messages: []protocol.Message{}},
 			protocol.Deal{Messages: []protocol.Message{protocol.Message{}}},
 		}
-		receivedDealChanges = []store.DealChange{}
+		receivedDealsChanges = []store.DealsChange{}
 	)
 
 	wg.Add(4)
 
 	go func() {
-		var dealChange store.DealChange
+		var dealChange store.DealsChange
 
 		for itr.Next(&dealChange) {
-			receivedDealChanges = append(receivedDealChanges, dealChange)
+			receivedDealsChanges = append(receivedDealsChanges, dealChange)
 
 			wg.Done()
 		}
@@ -72,20 +72,20 @@ func TestCreateDealsChangeIterator(t *testing.T) {
 
 	wg.Wait()
 
-	require.Len(t, receivedDealChanges, 4)
+	require.Len(t, receivedDealsChanges, 4)
 
-	require.Empty(t, receivedDealChanges[0].Old)
-	require.Empty(t, receivedDealChanges[0].New.Messages)
+	require.Empty(t, receivedDealsChanges[0].Old)
+	require.Empty(t, receivedDealsChanges[0].New.Messages)
 
-	require.Empty(t, receivedDealChanges[1].Old)
-	require.Len(t, receivedDealChanges[1].New.Messages, 1)
+	require.Empty(t, receivedDealsChanges[1].Old)
+	require.Len(t, receivedDealsChanges[1].New.Messages, 1)
 
-	require.Len(t, receivedDealChanges[2].Old.Messages, 1)
-	require.Len(t, receivedDealChanges[2].New.Messages, 1)
-	require.Equal(t, receivedDealChanges[2].New.Holder.Name, "foo")
+	require.Len(t, receivedDealsChanges[2].Old.Messages, 1)
+	require.Len(t, receivedDealsChanges[2].New.Messages, 1)
+	require.Equal(t, receivedDealsChanges[2].New.Holder.Name, "foo")
 
-	require.Len(t, receivedDealChanges[3].Old.Messages, 1)
-	require.Len(t, receivedDealChanges[3].New.Messages, 2)
+	require.Len(t, receivedDealsChanges[3].Old.Messages, 1)
+	require.Len(t, receivedDealsChanges[3].New.Messages, 2)
 
 	m, err := trn.MatchRead(id)
 	require.NoError(t, err)

@@ -30,14 +30,11 @@ func (s *Server) guardRuntime(matchID string) (*matchRuntime, error) {
 		go mRuntime.dealsChangesBroadcaster.Run()
 
 		go func() {
-			var dealChange store.DealChange
+			var dealChange store.DealsChange
 
 			for iterator.Next(&dealChange) {
 				func(r *matchRuntime) {
-					r.dealsChangesBroadcaster.Submit(protocol.NotificationContainer{
-						Notification: protocol.NDealChange,
-						Body:         dealChange,
-					})
+					r.dealsChangesBroadcaster.Submit(dealChange)
 				}(mRuntime)
 			}
 		}()

@@ -9,7 +9,7 @@ type Transaction struct {
 	errors []error
 
 	inMemory, inMemoryCopy *inMemory
-	dealChangeSubmitter    func(*store.DealChange)
+	dealChangeSubmitter    func(*store.DealsChange)
 
 	closed bool
 	done   func()

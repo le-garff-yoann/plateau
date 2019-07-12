@@ -35,38 +35,38 @@ func (s *deal) toProtocolStruct(pPlayers []*protocol.Player) *protocol.Deal {
 	}
 }
 
-// CreateDealsChangeIterator implements the `store.DealChangeIterator` interface.
-func (s *Store) CreateDealsChangeIterator(id string) (store.DealChangeIterator, error) {
-	itr := DealChangeIterator{dealChangesBroadcaster: s.dealChangesBroadcaster}
+// CreateDealsChangeIterator implements the `store.DealsChangeIterator` interface.
+func (s *Store) CreateDealsChangeIterator(id string) (store.DealsChangeIterator, error) {
+	itr := DealsChangeIterator{dealsChangeBroadcaster: s.dealsChangeBroadcaster}
 
-	itr.dealChangesBroadcasterChan, itr.dealChangesBroadcasterUUID = s.dealChangesBroadcaster.Subscribe()
+	itr.dealsChangeBroadcasterChan, itr.dealsChangeBroadcasterUUID = s.dealsChangeBroadcaster.Subscribe()
 
 	return &itr, nil
 }
 
-// DealChangeIterator implements the `store.DealChangeIterator` interface.
-type DealChangeIterator struct {
-	dealChangesBroadcaster *broadcaster.Broadcaster
+// DealsChangeIterator implements the `store.DealsChangeIterator` interface.
+type DealsChangeIterator struct {
+	dealsChangeBroadcaster *broadcaster.Broadcaster
 
-	dealChangesBroadcasterChan <-chan interface{}
-	dealChangesBroadcasterUUID uuid.UUID
+	dealsChangeBroadcasterChan <-chan interface{}
+	dealsChangeBroadcasterUUID uuid.UUID
 }
 
-// Next implements the `store.DealChangeIterator` interface.
-func (s *DealChangeIterator) Next(dealChange *store.DealChange) bool {
-	v, ok := <-s.dealChangesBroadcasterChan
+// Next implements the `store.DealsChangeIterator` interface.
+func (s *DealsChangeIterator) Next(dealChange *store.DealsChange) bool {
+	v, ok := <-s.dealsChangeBroadcasterChan
 	if !ok {
 		return false
 	}
 
-	*dealChange = v.(store.DealChange)
+	*dealChange = v.(store.DealsChange)
 
 	return true
 }
 
-// Close implements the `store.DealChangeIterator` interface.
-func (s *DealChangeIterator) Close() error {
-	s.dealChangesBroadcaster.Unsubscribe(s.dealChangesBroadcasterUUID)
+// Close implements the `store.DealsChangeIterator` interface.
+func (s *DealsChangeIterator) Close() error {
+	s.dealsChangeBroadcaster.Unsubscribe(s.dealsChangeBroadcasterUUID)
 
 	return nil
 }

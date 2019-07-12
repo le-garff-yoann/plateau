@@ -84,9 +84,9 @@ func Init(listener, listenerStaticDir string, gm Game, str store.Store) (*Server
 		HandlerFunc(s.getMatchDealsHandler).
 		Name("getMatchDeals")
 	ar.
-		PathPrefix("/matchs/{id}/notifications").
-		HandlerFunc(s.streamMatchNotificationsHandler).
-		Name("streamMatchNotifications")
+		PathPrefix("/matchs/{id}/deals-change").
+		HandlerFunc(s.streamMatchDealsChangeHandler).
+		Name("streamMatchDealsChange")
 	ar.
 		PathPrefix("/matchs/{id}").
 		Methods("GET").

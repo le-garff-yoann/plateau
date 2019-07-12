@@ -202,7 +202,7 @@ func TestMatchDealsHandler(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code)
 }
 
-func TestStreamMatchNotificationsHandler(t *testing.T) {
+func TestStreamMatchDealsChangeHandler(t *testing.T) {
 	t.Parallel()
 
 	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
@@ -219,7 +219,7 @@ func TestStreamMatchNotificationsHandler(t *testing.T) {
 	// srv.Start()
 	// defer srv.Stop()
 
-	h := http.Handler(srv.router.Get("streamMatchNotifications").GetHandler())
+	h := http.Handler(srv.router.Get("streamMatchDealsChange").GetHandler())
 
 	req, err := http.NewRequest("GET", "", nil)
 	require.NoError(t, err)

@@ -165,7 +165,7 @@ func (s *Server) getMatchDealsHandler(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, http.StatusOK, deals)
 }
 
-func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) streamMatchDealsChangeHandler(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(errors.New("Cannot flush")))
@@ -241,8 +241,8 @@ func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.
 		done <- 0
 	}()
 
-	notificationCh, notificationUUID := mRuntime.dealsChangesBroadcaster.Subscribe()
-	defer mRuntime.dealsChangesBroadcaster.Unsubscribe(notificationUUID)
+	ch, UUID := mRuntime.dealsChangesBroadcaster.Subscribe()
+	defer mRuntime.dealsChangesBroadcaster.Unsubscribe(UUID)
 
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.WriteHeader(http.StatusOK)
@@ -250,25 +250,24 @@ func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.
 	encoder := json.NewEncoder(w)
 
 	for {
-		v, ok := <-notificationCh
+		v, ok := <-ch
 		if !ok {
 			return
 		}
 
-		notifContainer := v.(protocol.NotificationContainer)
+		dealChange := v.(store.DealsChange)
 
 		logrus.
-			WithField("type", "notification").
 			WithField("match", match.ID).
-			Debug(notifContainer)
+			Debug(dealChange)
 
-		if notifContainer.Notification == protocol.NDealChange {
-			dealChange := notifContainer.Body.(store.DealChange)
-
-			dealChange.New.WithMessagesConcealed(username)
+		if dealChange.Old != nil {
+			dealChange.Old = dealChange.Old.WithMessagesConcealed(username)
 		}
 
-		err := encoder.Encode(notifContainer)
+		dealChange.New = dealChange.New.WithMessagesConcealed(username)
+
+		err := encoder.Encode(dealChange)
 		if err != nil {
 			panic(err)
 		}

@@ -163,7 +163,7 @@ func (s *Transaction) MatchCreateDeal(id string, deal protocol.Deal) (err error)
 
 	m.Deals = append(m.Deals, *dealFromProtocolStruct(&deal))
 
-	s.dealChangeSubmitter(&store.DealChange{Old: nil, New: &deal})
+	s.dealChangeSubmitter(&store.DealsChange{Old: nil, New: &deal})
 
 	return nil
 }
@@ -186,7 +186,7 @@ func (s *Transaction) MatchUpdateCurrentDealHolder(id, newHolderName string) (er
 
 	m.Deals[len(m.Deals)-1].Holder.Name = newHolderName
 
-	s.dealChangeSubmitter(&store.DealChange{
+	s.dealChangeSubmitter(&store.DealsChange{
 		Old: oldDeal.toProtocolStruct(s.inMemoryCopy.Players),
 		New: m.Deals[len(m.Deals)-1].toProtocolStruct(s.inMemoryCopy.Players),
 	})
@@ -213,7 +213,7 @@ func (s *Transaction) MatchAddMessageToCurrentDeal(id string, message protocol.M
 	deal := &m.Deals[len(m.Deals)-1]
 	deal.Messages = append(deal.Messages, message)
 
-	s.dealChangeSubmitter(&store.DealChange{
+	s.dealChangeSubmitter(&store.DealsChange{
 		Old: oldDeal.toProtocolStruct(s.inMemoryCopy.Players),
 		New: deal.toProtocolStruct(s.inMemoryCopy.Players),
 	})
