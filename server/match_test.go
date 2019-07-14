@@ -244,8 +244,9 @@ func TestStreamMatchDealsChangeHandler(t *testing.T) {
 		return rr
 	}
 
-	// FIXME: rr.Body does not "refresh" on flusher.Flush().
-	// TODO: Test if []protocol.Deals are "WithMessagesConcealed()".
+	// FIXME:
+	//	- rr.Body does not "refresh" on flusher.Flush().
+	//	- Test if []protocol.Deals are "WithMessagesConcealed()".
 
 	// var (
 	// 	rr = newRecorder(true)

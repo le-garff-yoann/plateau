@@ -63,7 +63,7 @@ func init() {
 		StringVarP(&serverListener, "listen", "l", ":8080", "Listen on x:x (e.g. :8080 or 127.0.0.1:8080)")
 	runCmd.
 		Flags().
-		StringVarP(&serverListenerStaticDir, "listen-static-dir", "", "", "Exposes the contents of this directory at /")
+		StringVar(&serverListenerStaticDir, "listen-static-dir", serverListenerStaticDir, "Exposes the contents of this directory at /")
 
 	runCmd.Flags().Var(&logLevel, "log-level", "Logrus log level")
 
