@@ -84,9 +84,7 @@ bash:helpers:integration tests:
       assert
       bash helpers_test.bash
   dependencies:
-    - go:build
-  except:
-    - tags
+    - docker:build:backend
 
 docker:release:backend:
   stage: docker release
@@ -102,6 +100,7 @@ docker:release:backend:
     - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" "${CI_REGISTRY_IMAGE}:latest"
     - docker push "${CI_REGISTRY_IMAGE}:latest"
   dependencies:
+    - go:build
     - bash:helpers:integration tests
   only:
     - tags
