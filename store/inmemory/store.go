@@ -10,7 +10,11 @@ import (
 	"github.com/ulule/deepcopier"
 )
 
-var sessionKey string
+var (
+	sessionKeys = []string{""}
+
+	sessionMaxAge = 86400 * 30
+)
 
 // Store implements the `store.Store` interface.
 type Store struct {
@@ -29,7 +33,15 @@ func (s *Store) Open() error {
 	s.dealsChangeBroadcaster = broadcaster.New()
 	go s.dealsChangeBroadcaster.Run()
 
-	s.sessionStore = sessions.NewCookieStore([]byte([]byte(sessionKey)))
+	var byteSessionKeys [][]byte
+	for _, sessionKey := range sessionKeys {
+		byteSessionKeys = append(byteSessionKeys, []byte(sessionKey))
+	}
+
+	sessionStore := sessions.NewCookieStore(byteSessionKeys...)
+	sessionStore.MaxAge(sessionMaxAge)
+
+	s.sessionStore = sessionStore
 
 	return nil
 }
@@ -45,9 +57,12 @@ func (s *Store) Close() error {
 func (s *Store) RunCommandSetter(runCmd *cobra.Command) {
 	runCmd.
 		Flags().
-		StringVarP(&sessionKey, "session-key", "", sessionKey, `Session ("secret") key`)
-	runCmd.MarkFlagRequired("session-key")
-	// TODO: Add a switch to configure the session expiration (MaxAge).
+		StringArrayVar(&sessionKeys, "session-key", sessionKeys, `Session ("secret") key`)
+	runCmd.MarkFlagRequired("session-keys")
+
+	runCmd.
+		Flags().
+		IntVar(&sessionMaxAge, "session-max-age", sessionMaxAge, "Sets the maximum duration of cookies in seconds")
 }
 
 // Sessions implements the `store.Store` interface.
