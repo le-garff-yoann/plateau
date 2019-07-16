@@ -53,19 +53,19 @@ curl -b $COOKIE_FILE -X POST $BASE/api/matchs \
 . helpers.bash
 
 # Setup a match with P1 (player 1) and P2 (player 2) as participants.
-t2pg_setupmatch P1 P2
+tpg_setupmatch P1 P2
 
 # Send a request from P1 and P2 perspective.
-t2pg_send P1 ?
-t2pg_send P2 ? 
-# t2pg_send P1 PLAY_ROCK
-# t2pg_send P1 PLAY_PAPER
+tpg_send P1 ?
+tpg_send P2 ? 
+# tpg_send P1 PLAY_ROCK
+# tpg_send P1 PLAY_PAPER
 
 # Show the match from the perspective of P1.
-t2pg_match P1
+tpg_match P1
 
 # Show the deals of the matchs from the perspective of P1.
-t2pg_deals P1
+tpg_deals P1
 ```
 
 ## Frontend

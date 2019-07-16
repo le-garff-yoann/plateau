@@ -184,7 +184,7 @@ _tpg_req() {
     [[ ! $(which curl jq) || -z $1 ]] && return 1 
 
     local \
-        BASE=${T2PG_PLATEAU_BASEURL:-http://localhost:3000} \
+        BASE=${TPG_PLATEAU_BASEURL:-http://localhost:3000} \
         COOKIE_NAME=plateau \
         COOKIE_FILE=$1.cookie \
         USERINFO="{\"username\":\"$1\",\"password\":\"$1\"}"
@@ -198,7 +198,7 @@ _tpg_req() {
     match_id=$(curl 2>/dev/null -b $COOKIE_FILE -X POST $BASE/api/matchs \
         -d '{"number_of_players_required":2}' | jq -r .id)
 
-    curl $BASE/api/matchs/$match_id$2 -b $COOKIE_FILE ${@:3} 2>/dev/null | jq .
+    curl $BASE/api/matchs/$match_id$2 -b $COOKIE_FILE ${@:3} 1>/dev/null | jq .
 
     [[ ${PIPESTATUS[0]} -eq 0 ]]
 }

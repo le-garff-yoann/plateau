@@ -80,7 +80,7 @@ bash:helpers:integration tests:
     - >
       docker exec
       -w /tmp
-      -e T2PG_PLATEAU_BASEURL=http://plateau:3000
+      -e TPG_PLATEAU_BASEURL=http://plateau:3000
       assert
       bash helpers_test.bash
   dependencies:

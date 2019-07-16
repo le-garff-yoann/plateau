@@ -7,7 +7,7 @@ assert_raises "new_plateau mygame"
 
 assert_raises "test -d ~/mygame"
 
-# $T2PG_PLATEAU_BASEURL
+# $TPG_PLATEAU_BASEURL
 
 assert_raises "tpg_setupmatch" 1
 assert_raises "tpg_setupmatch P1 P2"
