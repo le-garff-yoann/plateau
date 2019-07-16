@@ -1,7 +1,7 @@
 # Plateau
 
 <p align="center">
-    <img src="docs/content/assets/img/plateau-logo.png" alt="Plateau" title="Plateau" />
+    <img src="vue/plateau/src/assets/logo.png" alt="Plateau" title="Plateau" />
 </p>
 
 [![Stability Status](https://img.shields.io/badge/stability-unstable-yellow.svg)](https://github.com/orangemug/stability-badges)
