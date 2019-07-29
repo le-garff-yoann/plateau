@@ -68,6 +68,6 @@ tpg_match P1
 tpg_deals P1
 ```
 
-## Frontend
+## Vue.js frontend
 
 Take a look [here](vue/plateau/).

@@ -21,6 +21,15 @@ go:unit tests:
     - go test ./... -tags="${_GOTAGS}" -coverpkg=./... -coverprofile=cover.out
     - go tool cover -func=cover.out
 
+node:unit tests:
+  stage: unit tests
+  image: node:11.3
+  before_script:
+    - cd vue/plateau/
+  script:
+    - npm install
+    - npm run test:unit
+
 go:build:
   stage: build
   before_script:
@@ -36,7 +45,21 @@ go:build:
   dependencies:
     - go:unit tests
 
-docker:build:backend:
+node:build:
+  stage: build
+  image: node:11.3
+  before_script:
+    - cd vue/plateau/
+  script:
+    - npm install
+    - npm run build
+  artifacts:
+    paths:
+      - vue/plateau/dist/
+  dependencies:
+    - node:unit tests
+
+docker:build:full:
   stage: docker build
   services:
     - docker:dind
@@ -44,10 +67,11 @@ docker:build:backend:
   before_script:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
   script:
-    - docker build -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
+    - docker build --build-arg PACKAGING=full -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
     - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
   dependencies:
     - go:build
+    - node:build
 
 bash:helpers:integration tests:
   stage: integration tests
@@ -84,9 +108,9 @@ bash:helpers:integration tests:
       assert
       bash helpers_test.bash
   dependencies:
-    - docker:build:backend
+    - docker:build:full
 
-docker:release:backend:
+docker:release:full:
   stage: docker release
   services:
     - docker:dind
@@ -94,7 +118,7 @@ docker:release:backend:
   before_script:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
   script:
-    - docker build -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
+    - docker build --build-arg PACKAGING=full -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
     - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
     - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
     - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" "${CI_REGISTRY_IMAGE}:latest"
