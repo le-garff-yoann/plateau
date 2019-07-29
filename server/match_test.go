@@ -41,7 +41,7 @@ func TestGetMatchIDsHandlerHandler(t *testing.T) {
 
 	rr := newRecorder()
 	require.Equal(t, http.StatusOK, rr.Code)
-	require.JSONEq(t, "null", rr.Body.String())
+	require.JSONEq(t, "[]", rr.Body.String())
 
 	trn := srv.store.BeginTransaction()
 

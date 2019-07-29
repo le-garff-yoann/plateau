@@ -22,6 +22,10 @@ func (s *Server) getPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if names == nil {
+		names = []string{}
+	}
+
 	response.WriteJSON(w, http.StatusOK, names)
 }
 

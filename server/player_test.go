@@ -38,7 +38,7 @@ func TestGetPlayersNameHandler(t *testing.T) {
 
 	rr := newRecorder()
 	require.Equal(t, http.StatusOK, rr.Code)
-	require.JSONEq(t, "null", rr.Body.String())
+	require.JSONEq(t, "[]", rr.Body.String())
 
 	player := protocol.Player{Name: "foo"}
 

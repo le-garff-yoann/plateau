@@ -27,6 +27,10 @@ func (s *Server) getMatchIDsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if IDs == nil {
+		IDs = []string{}
+	}
+
 	response.WriteJSON(w, http.StatusOK, IDs)
 }
 
@@ -117,7 +121,7 @@ func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var names []string
+	names := []string{}
 	for _, p := range match.Players {
 		names = append(names, p.Name)
 	}
