@@ -8,7 +8,7 @@ import (
 
 // Broadcaster delivers data from the emitter to his subscriber.
 type Broadcaster struct {
-	mux sync.Mutex
+	mux sync.RWMutex
 
 	emitter     chan interface{}
 	subscribers map[uuid.UUID]chan interface{}
@@ -49,7 +49,6 @@ func (s *Broadcaster) Unsubscribe(uuid uuid.UUID) bool {
 
 	_, ok := s.subscribers[uuid]
 	if ok {
-		close(s.subscribers[uuid])
 		delete(s.subscribers, uuid)
 	}
 
@@ -61,22 +60,16 @@ func (s *Broadcaster) Run() {
 	for {
 		select {
 		case ec := <-s.emitter:
-			var wg sync.WaitGroup
+			go func() {
+				s.mux.RLock()
+				defer s.mux.RUnlock()
 
-			s.mux.Lock()
-
-			for _, rs := range s.subscribers {
-				wg.Add(1)
-
-				go func(rs chan interface{}) {
-					rs <- ec
-
-					wg.Done()
-				}(rs)
-			}
-
-			wg.Wait()
-			s.mux.Unlock()
+				for _, rs := range s.subscribers {
+					go func(rs chan interface{}) {
+						rs <- ec
+					}(rs)
+				}
+			}()
 		case <-s.done:
 			return
 		}

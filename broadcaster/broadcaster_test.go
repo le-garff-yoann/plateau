@@ -15,17 +15,19 @@ func TestBroadcaster(t *testing.T) {
 
 		br = New()
 
-		i = 100
+		i = 10000
 		a = 0
 		b = 0
 
 		chA, uuidA = br.Subscribe()
-		chB, uuidB = br.Subscribe()
 	)
 
-	require.Len(t, br.subscribers, 2)
+	require.Len(t, br.subscribers, 1)
 
 	go br.Run()
+
+	chB, uuidB := br.Subscribe()
+	require.Len(t, br.subscribers, 2)
 
 	wg.Add(i * 2)
 	go func() {
@@ -50,7 +52,10 @@ func TestBroadcaster(t *testing.T) {
 	}()
 
 	for j := 0; j < i; j++ {
-		br.Submit(j)
+		go br.Submit(j)
+
+		_, UUID := br.Subscribe()
+		br.Unsubscribe(UUID)
 	}
 
 	wg.Wait()
