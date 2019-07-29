@@ -198,7 +198,7 @@ _tpg_req() {
     match_id=$(curl 2>/dev/null -b $COOKIE_FILE -X POST $BASE/api/matchs \
         -d '{"number_of_players_required":2}' | jq -r .id)
 
-    curl $BASE/api/matchs/$match_id$2 -b $COOKIE_FILE ${@:3} 1>/dev/null | jq .
+    curl $BASE/api/matchs/$match_id$2 -s -b $COOKIE_FILE ${@:3} 2>/dev/null | jq .
 
     [[ ${PIPESTATUS[0]} -eq 0 ]]
 }
