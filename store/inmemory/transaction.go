@@ -8,17 +8,18 @@ import (
 type Transaction struct {
 	errors []error
 
-	inMemory, inMemoryCopy *inMemory
-	dealChangeSubmitter    func(*store.DealsChange)
+	matchNotifications []store.MatchNotification
 
-	closed bool
-	done   func()
+	inMemory, inMemoryCopy *inMemory
+
+	closed         bool
+	commitCb, done func(*Transaction)
 }
 
 func (s *Transaction) close() {
 	s.closed = true
 
-	s.done()
+	s.done(s)
 }
 
 // Commit implements the `store.Transaction` interface.
@@ -28,6 +29,8 @@ func (s *Transaction) Commit() {
 	}
 
 	*s.inMemory = *s.inMemoryCopy
+
+	s.commitCb(s)
 	s.close()
 }
 

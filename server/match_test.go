@@ -159,50 +159,7 @@ func TestMatchPlayersNameHandler(t *testing.T) {
 	require.JSONEq(t, fmt.Sprintf(`["%s"]`, player.Name), rr.Body.String())
 }
 
-func TestMatchDealsHandler(t *testing.T) {
-	t.Parallel()
-
-	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
-	require.NoError(t, err)
-
-	require.NoError(t, srv.store.Open())
-	defer func() {
-		require.NoError(t, srv.store.Close())
-	}()
-
-	var (
-		h = http.Handler(srv.router.Get("getMatchDeals").GetHandler())
-
-		match  = testCreateAndReadMatchHandler(t, srv)
-		player = protocol.Player{Name: "foo", Password: "foo"}
-
-		trn = srv.store.BeginTransaction()
-	)
-
-	require.NoError(t, trn.MatchCreateDeal(match.ID, protocol.Deal{}))
-	trn.Commit()
-
-	_, loginRecorder := testRegisterAndLoginHandlers(t, srv, player.Name, player.Password)
-
-	req, err := http.NewRequest("GET", "", nil)
-	require.NoError(t, err)
-
-	for _, c := range loginRecorder.Result().Cookies() {
-		req.AddCookie(c)
-	}
-
-	req = mux.SetURLVars(req, map[string]string{
-		"id": match.ID,
-	})
-
-	rr := httptest.NewRecorder()
-
-	h.ServeHTTP(rr, req)
-
-	require.Equal(t, http.StatusOK, rr.Code)
-}
-
-func TestStreamMatchDealsChangeHandler(t *testing.T) {
+func TestStreamMatchNotificationsHandler(t *testing.T) {
 	t.Parallel()
 
 	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
@@ -219,7 +176,7 @@ func TestStreamMatchDealsChangeHandler(t *testing.T) {
 	// srv.Start()
 	// defer srv.Stop()
 
-	h := http.Handler(srv.router.Get("streamMatchDealsChange").GetHandler())
+	h := http.Handler(srv.router.Get("streamMatchNotifications").GetHandler())
 
 	req, err := http.NewRequest("GET", "", nil)
 	require.NoError(t, err)
@@ -244,9 +201,7 @@ func TestStreamMatchDealsChangeHandler(t *testing.T) {
 		return rr
 	}
 
-	// FIXME:
-	//	- rr.Body does not "refresh" on flusher.Flush().
-	//	- Test if []protocol.Deals are "WithMessagesConcealed()".
+	// FIXME: rr.Body does not "refresh" on flusher.Flush().
 
 	// var (
 	// 	rr = newRecorder(true)
@@ -289,8 +244,7 @@ func TestStreamMatchDealsChangeHandler(t *testing.T) {
 
 	// trn := srv.store.BeginTransaction()
 
-	// trn.MatchCreateDeal(match.ID, protocol.Deal{})
-	// trn.MatchAddMessageToCurrentDeal(match.ID, protocol.Message{})
+	// trn.MatchEndedAt(match.ID, time.Now())
 
 	// trn.Commit()
 
@@ -306,6 +260,49 @@ func TestStreamMatchDealsChangeHandler(t *testing.T) {
 	trn.Commit()
 
 	require.Equal(t, http.StatusGone, newRecorder(false).Code)
+}
+
+func TestMatchDealsHandler(t *testing.T) {
+	t.Parallel()
+
+	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	require.NoError(t, err)
+
+	require.NoError(t, srv.store.Open())
+	defer func() {
+		require.NoError(t, srv.store.Close())
+	}()
+
+	var (
+		h = http.Handler(srv.router.Get("getMatchDeals").GetHandler())
+
+		match  = testCreateAndReadMatchHandler(t, srv)
+		player = protocol.Player{Name: "foo", Password: "foo"}
+
+		trn = srv.store.BeginTransaction()
+	)
+
+	require.NoError(t, trn.MatchCreateDeal(match.ID, protocol.Deal{}))
+	trn.Commit()
+
+	_, loginRecorder := testRegisterAndLoginHandlers(t, srv, player.Name, player.Password)
+
+	req, err := http.NewRequest("GET", "", nil)
+	require.NoError(t, err)
+
+	for _, c := range loginRecorder.Result().Cookies() {
+		req.AddCookie(c)
+	}
+
+	req = mux.SetURLVars(req, map[string]string{
+		"id": match.ID,
+	})
+
+	rr := httptest.NewRecorder()
+
+	h.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestPatchMatchHandler(t *testing.T) {

@@ -129,47 +129,7 @@ func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Reque
 	response.WriteJSON(w, http.StatusOK, names)
 }
 
-func (s *Server) getMatchDealsHandler(w http.ResponseWriter, r *http.Request) {
-	var (
-		trn = s.store.BeginTransaction()
-
-		matchID = mux.Vars(r)["id"]
-	)
-
-	match, err := trn.MatchRead(matchID)
-	trn.Abort()
-
-	if err != nil {
-		if _, ok := err.(store.DontExistError); ok {
-			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, matchID)))
-		} else {
-			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
-		}
-
-		return
-	}
-
-	var playerName []string
-	if !match.IsEnded() {
-		session, err := s.store.Sessions().Get(r, ServerName)
-		if err != nil {
-			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
-
-			return
-		}
-
-		playerName = append(playerName, session.Values["username"].(string))
-	}
-
-	var deals []protocol.Deal
-	for _, d := range match.Deals {
-		deals = append(deals, *d.WithMessagesConcealed(playerName...))
-	}
-
-	response.WriteJSON(w, http.StatusOK, deals)
-}
-
-func (s *Server) streamMatchDealsChangeHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(errors.New("Cannot flush")))
@@ -177,16 +137,8 @@ func (s *Server) streamMatchDealsChangeHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	session, err := s.store.Sessions().Get(r, ServerName)
-	if err != nil {
-		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
-
-		return
-	}
-
 	var (
-		username = session.Values["username"].(string)
-		matchID  = mux.Vars(r)["id"]
+		matchID = mux.Vars(r)["id"]
 
 		trn = s.store.BeginTransaction()
 	)
@@ -245,13 +197,16 @@ func (s *Server) streamMatchDealsChangeHandler(w http.ResponseWriter, r *http.Re
 		done <- 0
 	}()
 
-	ch, UUID := mRuntime.dealsChangesBroadcaster.Subscribe()
-	defer mRuntime.dealsChangesBroadcaster.Unsubscribe(UUID)
+	ch, UUID := mRuntime.matchNotificationsBroadcaster.Subscribe()
+	defer mRuntime.matchNotificationsBroadcaster.Unsubscribe(UUID)
 
 	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
 	w.WriteHeader(http.StatusOK)
 
-	encoder := json.NewEncoder(w)
+	flusher.Flush()
 
 	for {
 		v, ok := <-ch
@@ -259,25 +214,67 @@ func (s *Server) streamMatchDealsChangeHandler(w http.ResponseWriter, r *http.Re
 			return
 		}
 
-		dealChange := v.(store.DealsChange)
+		matchNotification := v.(store.MatchNotification)
 
-		logrus.
-			WithField("match", match.ID).
-			Debug(dealChange)
+		logCtx := logrus.
+			WithField("match", match.ID)
 
-		if dealChange.Old != nil {
-			dealChange.Old = dealChange.Old.WithMessagesConcealed(username)
-		}
+		logCtx.Debug(matchNotification)
 
-		dealChange.New = dealChange.New.WithMessagesConcealed(username)
-
-		err := encoder.Encode(dealChange)
+		jsonb, err := json.Marshal(matchNotification)
 		if err != nil {
 			panic(err)
 		}
 
+		_, err = fmt.Fprintf(w, "data: %s\n\n", string(jsonb))
+		if err != nil {
+			logCtx.Warning(err)
+
+			return
+		}
+
 		flusher.Flush()
 	}
+}
+
+func (s *Server) getMatchDealsHandler(w http.ResponseWriter, r *http.Request) {
+	var (
+		trn = s.store.BeginTransaction()
+
+		matchID = mux.Vars(r)["id"]
+	)
+
+	match, err := trn.MatchRead(matchID)
+	trn.Abort()
+
+	if err != nil {
+		if _, ok := err.(store.DontExistError); ok {
+			response.WriteJSON(w, http.StatusNotFound, body.New().Ko(fmt.Errorf(`Match "%s" not found`, matchID)))
+		} else {
+			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+		}
+
+		return
+	}
+
+	var playerName []string
+	if !match.IsEnded() {
+		session, err := s.store.Sessions().Get(r, ServerName)
+		if err != nil {
+			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+			return
+		}
+
+		playerName = append(playerName, session.Values["username"].(string))
+	}
+
+	deals := []protocol.Deal{}
+	for _, d := range match.Deals {
+		deals = append(deals, *d.WithMessagesConcealed(playerName...))
+	}
+
+	response.WriteJSON(w, http.StatusOK, deals)
 }
 
 func (s *Server) patchMatchHandler(w http.ResponseWriter, r *http.Request) {

@@ -9,7 +9,7 @@ import (
 // (a SQL database for example) with the method `Open()` and `Close()`.
 //	- `RunCommandSetter()` is there to allow the configuration of the awning via new Cobra flags.
 //	- `BeginTransaction()` returns a new `Transaction`.
-//	- `CreateDealsChangeIterator()` returns a new `DealsChangeIterator`.
+//	- `CreateMatchNotificationsIterator()` returns a new `MatchNotificationsIterator`.
 type Store interface {
 	Open() error
 	Close() error
@@ -19,5 +19,5 @@ type Store interface {
 	Sessions() sessions.Store
 
 	BeginTransaction(...TransactionScope) Transaction
-	CreateDealsChangeIterator(id string) (DealsChangeIterator, error)
+	CreateMatchNotificationsIterator(id string) (MatchNotificationsIterator, error)
 }

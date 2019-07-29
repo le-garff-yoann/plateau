@@ -7,7 +7,6 @@ import (
 
 	"github.com/gorilla/sessions"
 	"github.com/spf13/cobra"
-	"github.com/ulule/deepcopier"
 )
 
 var (
@@ -20,8 +19,8 @@ var (
 type Store struct {
 	inMemoryMux sync.Mutex
 
-	inMemory               *inMemory
-	dealsChangeBroadcaster *broadcaster.Broadcaster
+	inMemory                      *inMemory
+	matchNotificationsBroadcaster *broadcaster.Broadcaster
 
 	sessionStore sessions.Store
 }
@@ -30,8 +29,8 @@ type Store struct {
 func (s *Store) Open() error {
 	s.inMemory = &inMemory{}
 
-	s.dealsChangeBroadcaster = broadcaster.New()
-	go s.dealsChangeBroadcaster.Run()
+	s.matchNotificationsBroadcaster = broadcaster.New()
+	go s.matchNotificationsBroadcaster.Run()
 
 	var byteSessionKeys [][]byte
 	for _, sessionKey := range sessionKeys {
@@ -48,7 +47,7 @@ func (s *Store) Open() error {
 
 // Close implements the `store.Store` interface.
 func (s *Store) Close() error {
-	s.dealsChangeBroadcaster.Done()
+	s.matchNotificationsBroadcaster.Done()
 
 	return nil
 }
@@ -58,7 +57,7 @@ func (s *Store) RunCommandSetter(runCmd *cobra.Command) {
 	runCmd.
 		Flags().
 		StringArrayVar(&sessionKeys, "session-key", sessionKeys, `Session ("secret") key`)
-	runCmd.MarkFlagRequired("session-keys")
+	runCmd.MarkFlagRequired("session-key")
 
 	runCmd.
 		Flags().
@@ -77,13 +76,12 @@ func (s *Store) BeginTransaction(scopes ...store.TransactionScope) store.Transac
 	return &Transaction{
 		inMemory:     s.inMemory,
 		inMemoryCopy: s.inMemory.Copy(),
-		dealChangeSubmitter: func(dealChange *store.DealsChange) {
-			var dealChangeCopy store.DealsChange
-			deepcopier.Copy(dealChange).To(&dealChangeCopy)
-
-			s.dealsChangeBroadcaster.Submit(dealChangeCopy)
+		closed:       false,
+		commitCb: func(trn *Transaction) {
+			for _, n := range trn.matchNotifications {
+				s.matchNotificationsBroadcaster.Submit(&n)
+			}
 		},
-		closed: false,
-		done:   func() { s.inMemoryMux.Unlock() },
+		done: func(_ *Transaction) { s.inMemoryMux.Unlock() },
 	}
 }

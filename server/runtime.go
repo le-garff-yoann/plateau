@@ -9,32 +9,32 @@ import (
 )
 
 func (s *Server) guardRuntime(matchID string) (*matchRuntime, error) {
-	s.matchmatchRuntimesMux.Lock()
-	defer s.matchmatchRuntimesMux.Unlock()
+	s.matchRuntimesMux.Lock()
+	defer s.matchRuntimesMux.Unlock()
 
 	if _, ok := s.matchRuntimes[matchID]; !ok {
-		iterator, err := s.store.CreateDealsChangeIterator(matchID)
+		iterator, err := s.store.CreateMatchNotificationsIterator(matchID)
 		if err != nil {
 			return nil, err
 		}
 
 		mRuntime := &matchRuntime{
-			game:                    s.game,
-			matchID:                 matchID,
-			dealsChangesBroadcaster: broadcaster.New(),
-			done: make(chan int),
+			game:                          s.game,
+			matchID:                       matchID,
+			matchNotificationsBroadcaster: broadcaster.New(),
+			done:                          make(chan int),
 		}
 
 		s.matchRuntimes[matchID] = mRuntime
 
-		go mRuntime.dealsChangesBroadcaster.Run()
+		go mRuntime.matchNotificationsBroadcaster.Run()
 
 		go func() {
-			var dealChange store.DealsChange
+			var matchNotification store.MatchNotification
 
-			for iterator.Next(&dealChange) {
+			for iterator.Next(&matchNotification) {
 				func(r *matchRuntime) {
-					r.dealsChangesBroadcaster.Submit(dealChange)
+					r.matchNotificationsBroadcaster.Submit(matchNotification)
 				}(mRuntime)
 			}
 		}()
@@ -42,7 +42,7 @@ func (s *Server) guardRuntime(matchID string) (*matchRuntime, error) {
 		go func(r *matchRuntime) {
 			<-r.done
 
-			r.dealsChangesBroadcaster.Done()
+			r.matchNotificationsBroadcaster.Done()
 
 			if iterator.Close() == nil {
 				return
@@ -56,8 +56,8 @@ func (s *Server) guardRuntime(matchID string) (*matchRuntime, error) {
 }
 
 func (s *Server) unguardRuntime(matchID string) bool {
-	s.matchmatchRuntimesMux.Lock()
-	defer s.matchmatchRuntimesMux.Unlock()
+	s.matchRuntimesMux.Lock()
+	defer s.matchRuntimesMux.Unlock()
 
 	r, ok := s.matchRuntimes[matchID]
 	if ok {
@@ -78,7 +78,7 @@ type matchRuntime struct {
 	matchID string
 	guard   int
 
-	dealsChangesBroadcaster *broadcaster.Broadcaster
+	matchNotificationsBroadcaster *broadcaster.Broadcaster
 
 	done chan int
 }

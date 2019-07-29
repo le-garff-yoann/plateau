@@ -2,6 +2,7 @@ package inmemory
 
 import (
 	"fmt"
+	"plateau/broadcaster"
 	"plateau/protocol"
 	"plateau/store"
 	"time"
@@ -137,6 +138,8 @@ func (s *Transaction) MatchEndedAt(id string, val time.Time) (err error) {
 		if err != nil {
 			s.errors = append(s.errors, err)
 		}
+
+		s.matchNotifications = append(s.matchNotifications, store.MatchNotification{})
 	}()
 
 	m := s.inMemoryCopy.Match(id)
@@ -155,6 +158,8 @@ func (s *Transaction) MatchCreateDeal(id string, deal protocol.Deal) (err error)
 		if err != nil {
 			s.errors = append(s.errors, err)
 		}
+
+		s.matchNotifications = append(s.matchNotifications, store.MatchNotification{})
 	}()
 	m := s.inMemoryCopy.Match(id)
 	if m == nil {
@@ -162,8 +167,6 @@ func (s *Transaction) MatchCreateDeal(id string, deal protocol.Deal) (err error)
 	}
 
 	m.Deals = append(m.Deals, *dealFromProtocolStruct(&deal))
-
-	s.dealChangeSubmitter(&store.DealsChange{Old: nil, New: &deal})
 
 	return nil
 }
@@ -174,6 +177,8 @@ func (s *Transaction) MatchUpdateCurrentDealHolder(id, newHolderName string) (er
 		if err != nil {
 			s.errors = append(s.errors, err)
 		}
+
+		s.matchNotifications = append(s.matchNotifications, store.MatchNotification{})
 	}()
 
 	m := s.inMemoryCopy.Match(id)
@@ -181,15 +186,7 @@ func (s *Transaction) MatchUpdateCurrentDealHolder(id, newHolderName string) (er
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
 
-	var oldDeal deal
-	deepcopier.Copy(m.Deals[len(m.Deals)-1]).To(&oldDeal)
-
 	m.Deals[len(m.Deals)-1].Holder.Name = newHolderName
-
-	s.dealChangeSubmitter(&store.DealsChange{
-		Old: oldDeal.toProtocolStruct(s.inMemoryCopy.Players),
-		New: m.Deals[len(m.Deals)-1].toProtocolStruct(s.inMemoryCopy.Players),
-	})
 
 	return nil
 }
@@ -200,6 +197,8 @@ func (s *Transaction) MatchAddMessageToCurrentDeal(id string, message protocol.M
 		if err != nil {
 			s.errors = append(s.errors, err)
 		}
+
+		s.matchNotifications = append(s.matchNotifications, store.MatchNotification{})
 	}()
 
 	m := s.inMemoryCopy.Match(id)
@@ -207,16 +206,8 @@ func (s *Transaction) MatchAddMessageToCurrentDeal(id string, message protocol.M
 		return store.DontExistError(fmt.Sprintf(`The match %s doesn't exist`, id))
 	}
 
-	var oldDeal deal
-	deepcopier.Copy(m.Deals[len(m.Deals)-1]).To(&oldDeal)
-
 	deal := &m.Deals[len(m.Deals)-1]
 	deal.Messages = append(deal.Messages, message)
-
-	s.dealChangeSubmitter(&store.DealsChange{
-		Old: oldDeal.toProtocolStruct(s.inMemoryCopy.Players),
-		New: deal.toProtocolStruct(s.inMemoryCopy.Players),
-	})
 
 	return nil
 }
@@ -227,6 +218,8 @@ func (s *Transaction) MatchPlayerJoins(id, name string) (err error) {
 		if err != nil {
 			s.errors = append(s.errors, err)
 		}
+
+		s.matchNotifications = append(s.matchNotifications, store.MatchNotification{})
 	}()
 
 	m := s.inMemoryCopy.Match(id)
@@ -253,6 +246,8 @@ func (s *Transaction) MatchPlayerLeaves(id, name string) (err error) {
 		if err != nil {
 			s.errors = append(s.errors, err)
 		}
+
+		s.matchNotifications = append(s.matchNotifications, store.MatchNotification{})
 	}()
 
 	m := s.inMemoryCopy.Match(id)
@@ -265,6 +260,42 @@ func (s *Transaction) MatchPlayerLeaves(id, name string) (err error) {
 	}
 
 	delete(m.Players, name)
+
+	return nil
+}
+
+// CreateMatchNotificationsIterator implements the `store.CreateMatchNotificationsIterator` interface.
+func (s *Store) CreateMatchNotificationsIterator(id string) (store.MatchNotificationsIterator, error) {
+	itr := MatchNotificationsIterator{matchNotificationsBroadcaster: s.matchNotificationsBroadcaster}
+
+	itr.matchNotificationsBroadcasterChan, itr.matchNotificationsBroadcasterUUID = s.matchNotificationsBroadcaster.Subscribe()
+
+	return &itr, nil
+}
+
+// MatchNotificationsIterator implements the `store.MatchNotificationsIterator` interface.
+type MatchNotificationsIterator struct {
+	matchNotificationsBroadcaster *broadcaster.Broadcaster
+
+	matchNotificationsBroadcasterChan <-chan interface{}
+	matchNotificationsBroadcasterUUID uuid.UUID
+}
+
+// Next implements the `store.MatchNotificationsIterator` interface.
+func (s *MatchNotificationsIterator) Next(matchNotification *store.MatchNotification) bool {
+	v, ok := <-s.matchNotificationsBroadcasterChan
+	if !ok {
+		return false
+	}
+
+	matchNotification = v.(*store.MatchNotification)
+
+	return true
+}
+
+// Close implements the `store.MatchNotificationsIterator` interface.
+func (s *MatchNotificationsIterator) Close() error {
+	s.matchNotificationsBroadcaster.Unsubscribe(s.matchNotificationsBroadcasterUUID)
 
 	return nil
 }

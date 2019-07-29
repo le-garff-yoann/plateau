@@ -16,8 +16,8 @@ const ServerName = "plateau"
 type Server struct {
 	game Game
 
-	matchmatchRuntimesMux sync.Mutex
-	matchRuntimes         map[string]*matchRuntime
+	matchRuntimesMux sync.Mutex
+	matchRuntimes    map[string]*matchRuntime
 
 	store store.Store
 
@@ -80,13 +80,13 @@ func Init(listener, listenerStaticDir string, gm Game, str store.Store) (*Server
 		HandlerFunc(s.getMatchPlayersNameHandler).
 		Name("getMatchPlayersName")
 	ar.
+		PathPrefix("/matchs/{id}/notifications").
+		HandlerFunc(s.streamMatchNotificationsHandler).
+		Name("streamMatchNotifications")
+	ar.
 		PathPrefix("/matchs/{id}/deals").
 		HandlerFunc(s.getMatchDealsHandler).
 		Name("getMatchDeals")
-	ar.
-		PathPrefix("/matchs/{id}/deals-change").
-		HandlerFunc(s.streamMatchDealsChangeHandler).
-		Name("streamMatchDealsChange")
 	ar.
 		PathPrefix("/matchs/{id}").
 		Methods("GET").
@@ -120,7 +120,7 @@ func Init(listener, listenerStaticDir string, gm Game, str store.Store) (*Server
 		Name("loginUser")
 	s.router.
 		PathPrefix("/user/logout").
-		Methods("DEL").
+		Methods("DELETE").
 		HandlerFunc(s.logoutUserHandler).
 		Name("logoutUser")
 
