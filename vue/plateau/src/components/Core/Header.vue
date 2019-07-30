@@ -54,10 +54,8 @@ export default {
       'game'
     ]),
     username() {
-      let localCookie = this.$cookies.get(consts.localCookieName)
-
-      return localCookie !== undefined && 'username' in localCookie
-        ? localCookie.username
+      return this.localCookie != null && 'username' in this.localCookie
+        ? this.localCookie.username
         : null
     }
   },

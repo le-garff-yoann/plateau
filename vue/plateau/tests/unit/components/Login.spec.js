@@ -10,7 +10,7 @@ describe('Login.vue', () => {
   it('is a b-container', () => expect(wrapper.find(BContainer).exists()).toBe(true))
 
   it('has b-img', () => expect(wrapper.find(BImg).exists()).toBe(true))
-  it('has Message', () => expect(wrapper.find(Messages).exists()).toBe(true))
+  it('has Messages', () => expect(wrapper.find(Messages).exists()).toBe(true))
 
   const spinner = wrapper.find(BSpinner)
   it('has a b-spinner', () => expect(spinner.exists()).toBe(true))

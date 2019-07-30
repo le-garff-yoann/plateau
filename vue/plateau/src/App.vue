@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <router-view v-if="sessionCookie" />
+    <router-view v-if="sessionCookie && localCookie" />
     <Login v-else />
   </div>
 </template>
@@ -14,16 +14,19 @@ export default {
   name: 'app',
   mounted() {
     this.setSessionCookie(window.$cookies.get(consts.serverName))
+    this.setLocalCookie(window.$cookies.get(consts.localCookieName))
   },
   components: { Login },
   computed: {
     ...mapState([ 
-      'sessionCookie'
+      'sessionCookie',
+      'localCookie'
     ])
   },
   methods: {
     ...mapMutations([
-      'setSessionCookie'
+      'setSessionCookie',
+      'setLocalCookie'
     ])
   }
 }

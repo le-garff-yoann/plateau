@@ -10,6 +10,7 @@ Vue.use(VueCookies)
 export default new Vuex.Store({
   state: {
     sessionCookie: null,
+    localCookie: null,
     globalMessage: null,
     globalError: null,
     loggingIn: false,
@@ -27,6 +28,7 @@ export default new Vuex.Store({
   },
   mutations: {
     setSessionCookie(state, val) { state.sessionCookie = val },
+    setLocalCookie(state, val) { state.localCookie = val },
     setGlobalMessage(state, val) { state.globalMessage = val },
     setGlobalError(state, err) { state.globalError = err },
     startLogin(state) { state.loggingIn = true },
@@ -58,6 +60,7 @@ export default new Vuex.Store({
           commit('setSessionCookie', window.$cookies.get(consts.serverName))
 
           window.$cookies.set(consts.localCookieName, { username: userinfo.username })
+          commit('setLocalCookie', window.$cookies.get(consts.localCookieName))
         })
         .catch(err => commit('setGlobalError', err))
         .then(() => commit('stopLogin'))
