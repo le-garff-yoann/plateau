@@ -13,9 +13,9 @@ new_plateau() {
         return 1
     fi
 
-    echo "Creation of the new project $1..."
+    echo "Creates project $1..."
 
-    echo "Copy from $PWD to ~/$1/"
+    echo "Copy $PWD to ~/$1/"
     cp -r $PWD ~/$1
 
     pushd ~/$1 || return 1
@@ -35,10 +35,10 @@ func newGame() server.Game {
 }
 EOF
 
-    echo "Creation of game/$1/"
+    echo "Creates game/$1/"
     mkdir game/$1
 
-    echo "Writing of game/$1/$1.go"
+    echo "Writes game/$1/$1.go"
     cat > game/$1/$1.go <<EOF
 package $1
 
@@ -90,7 +90,8 @@ func (s *Game) MaxPlayers() uint {
 	return s.maxPlayers
 }
 EOF
-    echo "Writing of game/$1/$1_test.go"
+
+    echo "Writes game/$1/$1_test.go"
     cat > game/$1/$1_test.go <<EOF
 package $1
 
@@ -116,7 +117,7 @@ func TestGame(t *testing.T) {
 }
 EOF
 
-    echo "Writing of game/$1/context.go"
+    echo "Writes game/$1/context.go"
     cat > game/$1/context.go <<EOF
 package $1
 
@@ -131,7 +132,8 @@ func (s *Game) Context(trn store.Transaction, reqContainer *protocol.RequestCont
 	return server.NewContext()
 }
 EOF
-    echo "Writing of game/$1/context_test.go"
+
+    echo "Writes game/$1/context_test.go"
     cat > game/$1/context_test.go <<EOF
 package $1
 
@@ -166,14 +168,42 @@ func TestGameRuntime(t *testing.T) {
 }
 EOF
 
-    echo "Cleaning of the project $1..."
+    echo "Cleans project $1..."
     rm -Rf \
         .git/ \
         .gitlab-ci.yml \
-        *.md \
+        {.,vue/plateau}/*.md
         vendor/ \
         cmd/run_rockpaperscissors.go \
         game/rockpaperscissors
+
+    cat > game/$1/context_test.go <<EOF
+EOF
+
+    echo 'Writes of README.md'
+    cat > README.md <<EOF
+# Plateau - $1
+
+## Build
+
+```bash
+go build -tags="run_$1 run_inmemory" -o dist/plateau
+```
+EOF
+    echo "Writes of $1/vue/plateau/README.md"
+    cat > vue/plateau/README.md <<EOF
+# Plateau - $1
+
+## Development mode
+
+1. Run `plateau run` with the `-l :3000` parameter.
+2.
+```bash
+NODE_DEV_PROXY_API=http://localhost:3000 \
+    npm run serve
+```
+
+EOF
 
     popd
 
