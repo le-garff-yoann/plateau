@@ -24,28 +24,22 @@ go build -tags="run_rockpaperscissors run_inmemory" -o dist/plateau
 
 # Start the server.
 dist/plateau run -l :3000 --session-key my-STRONG-secret
+
+# Build a Docker image including the frontend.
+pushd vue/plateau
+
+npm install
+npm run build
+
+popd
+
+docker build --build-arg PACKAGING=full -t my-plateau .
+
+# Start the server via Docker.
+docker run -d -p 8080:80 -e LISTEN=80 -e SESSION_KEY=my-STRONG-secret my-plateau
 ```
 
 **N.B.** Parameters to the `run` subcommand may vary function of the flags declared by `store.RunCommandSetter(*cobra.Command)` (and thus by the implementation of `store.Store`).
-
-## A quick look at the API
-
-```bash
-BASE=http://localhost:3000
-COOKIE_NAME=plateau
-COOKIE_FILE=me.cookie
-USERINFO='{"username":"me","password":"1234"}'
-
-# Register yourself.
-curl $BASE/user/register -d $USERINFO
-
-# Log in.
-curl $BASE/user/login --cookie-jar $COOKIE_FILE -d $USERINFO
-
-# Create and return a match.
-curl -b $COOKIE_FILE -X POST $BASE/api/matchs \
-    -d '{"number_of_players_required":2}'
-```
 
 ## Test Rock–paper–scissors
 
@@ -67,7 +61,3 @@ tpg_match P1
 # Show the deals of the matchs from the perspective of P1.
 tpg_deals P1
 ```
-
-## Vue.js frontend
-
-Take a look [here](vue/plateau/).
