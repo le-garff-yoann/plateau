@@ -18,7 +18,8 @@ export default new Router({
     },
     {
       path: '/match/:id',
-      component: Match
+      component: Match,
+      props: true
     },
     {
       path: '/players',

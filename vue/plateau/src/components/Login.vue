@@ -18,15 +18,34 @@
           v-show="!loggingIn && !registerIn"
         >
           <b-form-group>
-            <b-form-input v-model="username" type="text" placeholder="Username" required></b-form-input>
+            <b-form-input
+              v-model="username"
+              type="text"
+              placeholder="Username"
+              required
+            ></b-form-input>
           </b-form-group>
 
           <b-form-group>
-            <b-form-input v-model="password" type="password" placeholder="Password"></b-form-input>
+            <b-form-input
+              v-model="password"
+              type="password"
+              placeholder="Password"
+            ></b-form-input>
           </b-form-group>
 
-          <b-button @click="action = 'in'" type="submit" variant="primary" block>Sign in</b-button>
-          <b-button @click="action = 'up'" type="submit" variant="dark" block>Sign up</b-button>
+          <b-button
+            @click="action = 'in'"
+            type="submit"
+            variant="primary"
+            block
+          >Sign in</b-button>
+          <b-button
+            @click="action = 'up'"
+            type="submit"
+            variant="dark"
+            block
+          >Sign up</b-button>
         </b-form>
       </b-col>
     </b-row>

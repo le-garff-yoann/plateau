@@ -3,21 +3,21 @@
     <b-row align-h="center">
       <b-col md="5">
         <b-alert
-          :show="globalMessage != null"
+          variant="success"
           dismissible
           fade
           @dismissed="setGlobalMessage(null)"
-          variant="success"
+          :show="globalMessage != null"
         >
           <p class="mb-0">{{ globalMessage }}</p>
         </b-alert>
 
         <b-alert
-          :show="globalError != null"
+          variant="warning"
           dismissible
           fade
           @dismissed="setGlobalError(null)"
-          variant="warning"
+          :show="globalError != null"
         >
           <p class="mb-0">{{ globalError }}</p>
         </b-alert>

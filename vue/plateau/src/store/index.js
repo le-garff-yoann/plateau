@@ -21,7 +21,10 @@ export default new Vuex.Store({
     refreshingPlayers: false,
     players: [],
     refreshingMatch: false,
-    match: {},
+    match: {
+      players: [],
+      deals: []
+    },
     refreshingMatchRequests: false,
     matchRequests: [],
     lastResponse: null
@@ -134,10 +137,16 @@ export default new Vuex.Store({
         axios.get(`/api/matchs/${matchID}/deals`)
       ])
       .then(res => {
+        
         commit('setMatch', {
           match: res[0].data,
           players: res[1].data,
-          deals: res[2].data
+          deals: res[2].data.map(x => {
+            return {
+              holder: x.holder.name,
+              messages: x.messages
+            }
+          })
         })
       })
       .catch(err => commit('setGlobalError', err))
@@ -147,7 +156,7 @@ export default new Vuex.Store({
       commit('startSetMatchRequests')
 
       axios
-        .patch(`/api/matchs/${matchID}`, { request: '?'})
+        .patch(`/api/matchs/${matchID}`, { request: consts.requests.help })
         .then(res => commit('setMatchRequests', res.data.body))
         .catch(err => commit('setGlobalError', err))
         .then(() => commit('stopSetMatchRequests'))

@@ -36,7 +36,6 @@ import { mapState, mapMutations, mapActions } from 'vuex'
 import BootstrapVue from 'bootstrap-vue'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
-import consts from '@/constants/index.js'
 
 Vue.use(BootstrapVue)
 

@@ -21,23 +21,23 @@ describe('Messages.vue', () => {
   
   const globalMessage = 'msg'
   it(
-    `has a visible and non-empty b-alert for messages with inner text set at ${globalMessage}`,
+    `alerts[0] is for messages and has inner text matching ${globalMessage}`,
     () => {
       wrapper.vm.setGlobalMessage(globalMessage)
 
       expect(alerts.at(0).isVisible()).toBe(true)
-      expect(alerts.at(0).text()).toBe(`×${globalMessage}`)
+      expect(alerts.at(0).text().includes(globalMessage)).toBe(true)
     }
   )
 
   const globalError = 'msg'
   it(
-    `has a visible and non-empty b-alert for errors with inner text set at ${globalError}`,
+    `alerts[1] is for errors and has inner inner text matching ${globalError}`,
     () => {
       wrapper.vm.setGlobalError(globalError)
 
       expect(alerts.at(1).isVisible()).toBe(true)
-      expect(alerts.at(1).text()).toBe(`×${globalError}`)
+      expect(alerts.at(1).text().includes(globalError)).toBe(true)
     }
   )
 })

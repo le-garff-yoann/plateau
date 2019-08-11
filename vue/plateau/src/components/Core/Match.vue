@@ -6,76 +6,86 @@
 
     <b-container class="pt-4 pb-4" fluid>
       <b-card
-        bg-variant="light"
+        no-body
         class="text-left"
+        v-bind:border-variant="match.match && match.match.ended_at == null ? 'success' : 'dark'"
       >
-        <h6 slot="header">
-          Match <em>{{ id }}</em>
-        </h6>
+        <b-button-group slot="header">
+          <b-button
+            @click.prevent="refreshMatch(id)"
+            variant="primary"
+          >
+            <font-awesome-icon
+              icon="redo"
+              v-show="!refreshingMatch"
+            ></font-awesome-icon>
 
-        <b-container fluid>
-          <b-row class="pb-3">
-            <b-col>
-              <b-dropdown @show="refreshMatchRequests(id)" text="Requests">
-                <b-dropdown-item v-show="refreshingMatchRequests">
-                  <b-spinner></b-spinner>
-                </b-dropdown-item>
+            <b-spinner
+              small
+              v-show="refreshingMatch"
+            ></b-spinner>
+          </b-button>
 
-                <b-dropdown-item
-                  v-show="!refreshingMatchRequests"
-                  v-for="(item, index) in matchRequests"
-                  :key="index"
-                  @click.prevent="doSendRequest({ request: item })"
-                >{{ item }}</b-dropdown-item>
-              </b-dropdown>
-            </b-col>
-          </b-row>
+          <b-dropdown text="Requests" @show="refreshMatchRequests(id)">
+            <b-dropdown-item v-show="refreshingMatchRequests">
+              <b-spinner></b-spinner>
+            </b-dropdown-item>
 
-          <b-row class="pb-3">
-            <b-col>
-              <highlight-code
-                lang="yaml"
-                class="rounded"
+            <b-dropdown-item
+              v-for="(item, index) in matchRequests.slice().sort()"
+              :key="index"
+              @click.prevent="doSendRequest({ request: item })"
+              v-show="!refreshingMatchRequests"
+            >{{ item }}</b-dropdown-item>
+          </b-dropdown>
+        </b-button-group>
+
+        <b-tabs pills card end>
+          <b-tab
+            ref="match-deals"
+            title="Deals"
+            class="tab"
+            no-body
+          >
+            <highlight-code lang="yaml">
+              {{ lastResponse | toYaml }}
+            </highlight-code>
+
+            <b-list-group flush v-show="match.deals.length > 0">
+              <b-list-group-item
+                v-for="(item, index) in match.deals.slice().reverse()"
+                :key="index"
               >
-                {{ lastResponse | toYaml }}
-              </highlight-code>
-            </b-col>
-          </b-row>
+                <highlight-code
+                  v-if="match.match && match.match.ended_at == null && index == 0"
+                  lang="yaml"
+                  class="active-deal"
+                >
+                  {{ item | toYaml }}
+                </highlight-code>
 
-          <b-row class="pb-3">
-            <b-col>
-              <highlight-code lang="yaml" class="rounded">
-                {{ { players: match.players } | toYaml }}
-              </highlight-code>
-            </b-col>
-          </b-row>
-          
-          <b-row ref="match-deals" class="match-deals">
-            <b-col>
-              <highlight-code lang="yaml" class="rounded">
-                {{ { deals: match.deals } | toYaml }}
-              </highlight-code>
-            </b-col>
-          </b-row>
-        </b-container>
+                <highlight-code
+                  v-else
+                  lang="yaml"
+                >
+                  {{ item | toYaml }}
+                </highlight-code>
+              </b-list-group-item>
+            </b-list-group>
+          </b-tab>
 
-        <b-container fluid slot="footer">
-          <b-row>
-            <b-col md="0">
-              <b-spinner
-                v-show="refreshingMatch"
-              ></b-spinner>
-
-              <b-button
-                v-show="!refreshingMatch"
-                @click.prevent="refreshMatch(id)"
-                variant="primary"
-              >
-                <font-awesome-icon icon="redo"></font-awesome-icon>
-              </b-button>
-            </b-col>
-          </b-row>
-        </b-container>
+          <b-tab
+            title="Players"
+            class="tab"
+          >
+            <b-list-group flush>
+              <b-list-group-item
+                v-for="(item, index) in match.players.slice().sort()"
+                :key="index"
+              >{{ item }}</b-list-group-item>
+            </b-list-group>
+          </b-tab>
+        </b-tabs>
       </b-card>
     </b-container>
   </div>
@@ -106,48 +116,34 @@ Vue.use(VueHighlightJS, {
 
 library.add(faRedo)
 
-let sseConn
-
 export default {
   mounted() {
     this.refreshMatch(this.id)
 
     this.refreshMatchRequests(this.id)
     this.setLastResponse(null)
-
-    const matchNotificationsURL = `/api/matchs/${this.id}/notifications`
-    this
-      .$sse(matchNotificationsURL)
-      .then(sse => {
-        sseConn = sse
-
-        sse.subscribe('message', () => this.refreshMatch(this.id))
-      })
-      .catch(e => {
-        if (e.readyState != EventSource.CLOSED)
-          this.setGlobalError(`${matchNotificationsURL}: ${JSON.stringify(e)}`)
-      })
-  },
-  updated() {
-    this.$refs['match-deals'].scrollTop = this.$refs['match-deals'].scrollHeight
   },
   beforeDestroy() {
-    if (sseConn)
-      sseConn.close()
+    if (this.sseConn)
+      this.sseConn.close()
   },
   components: {
     FontAwesomeIcon, Header, Messages
   },
+  props: {
+    id: String
+  },
   data() {
     return {
-      id: this.$route.params.id
+      sseConn: null,
+      sseSingleton: false
     }
   },
   computed: {
     ...mapState([
       'refreshingMatch', 'match',
       'refreshingMatchRequests', 'matchRequests',
-      'lastRequest', 'lastResponse'
+      'lastResponse'
     ])
   },
   methods: {
@@ -169,9 +165,33 @@ export default {
       this.refreshMatch(this.id)
     }
   },
+  watch: {
+    refreshingMatch(val) {
+      if (!this.sseSingleton && !val && this.match.match.ended_at == null) {
+        this.sseSingleton = true
+
+        const matchNotificationsURL = `/api/matchs/${this.id}/notifications`
+        this
+          .$sse(matchNotificationsURL)
+          .then(sse => {
+            this.sseConn = sse
+
+            sse.subscribe('message', () => {
+              this.refreshMatch(this.id)
+
+              this.refreshMatchRequests(this.id)
+            })
+          })
+          .catch(e => {
+            if (e.readyState != EventSource.CLOSED)
+              this.setGlobalError(`${matchNotificationsURL}: ${JSON.stringify(e)}`)
+          })
+      }
+    }
+  },
   filters: {
-    toYaml(v) {
-      return JsYaml.safeDump(v, {
+    toYaml(val) {
+      return JsYaml.safeDump(val, {
         skipInvalid: true
       })
     }
@@ -180,8 +200,12 @@ export default {
 </script>
 
 <style scoped>
-.match-deals {
-  overflow-y:scroll;
-  height:40vh;
+.tab {
+  overflow-y: scroll;
+  height: 75vh;
+}
+
+.active-deal {
+  border: 3px solid green;
 }
 </style>

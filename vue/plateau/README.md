@@ -1,6 +1,6 @@
 # Plateau
 
-[![Stability Status](https://img.shields.io/badge/stability-work_in_progress-red.svg)](https://github.com/orangemug/stability-badges)
+[![Stability Status](https://img.shields.io/badge/stability-unstable-yellow.svg)](https://github.com/orangemug/stability-badges)
 [![Pipeline Status](https://gitlab.com/le-garff-yoann/plateau/badges/master/pipeline.svg)](https://gitlab.com/le-garff-yoann/plateau/pipelines)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 

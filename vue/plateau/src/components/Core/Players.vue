@@ -9,7 +9,7 @@
         <b-col>
           <b-button-toolbar>
             <b-button-group>
-              <b-button @click.prevent="refreshPlayers" variant="primary">
+              <b-button variant="primary" @click.prevent="refreshPlayers">
                 <font-awesome-icon icon="redo"></font-awesome-icon>
               </b-button>
             </b-button-group>
@@ -24,12 +24,12 @@
           ></b-spinner>
 
           <b-table
-            class="players"
             small
             striped
             hover
-            v-show="!refreshingPlayers"
+            class="players"
             :items="players"
+            v-show="!refreshingPlayers"
           >
           </b-table>
         </b-col>

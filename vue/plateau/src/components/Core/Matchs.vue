@@ -26,28 +26,30 @@
           ></b-spinner>
 
           <b-table
-            class="matchs"
             small
-            striped
             hover
+            class="matchs"
+            :items="stylizedMatchs"
             v-show="!refreshingMatchs"
-            :items="matchs"
+            show-empty
           >
             <template slot="id" slot-scope="data">
-              <b-link v-bind:to="`/match/${data.value}`">{{ data.value }}</b-link>
+              <b-link
+                v-bind:to="`/match/${data.value}`"
+              >{{ data.value }}</b-link>
             </template>
           </b-table>
         </b-col>
       </b-row>
     </b-container>
 
-    <b-modal id="new-match" title="New match" @ok="doCreateMatch" size="xl">
+    <b-modal id="new-match" title="New match" size="xl" @ok="createMatch(newMatchNumberOfPlayersRequired)">
       <label for="input-live">Number of players required: {{ newMatchNumberOfPlayersRequired }}</label>
 
       <b-form-input
+        type="range"
         v-model="newMatchNumberOfPlayersRequired"
         :run="!newMatchNumberOfPlayersRequired ? newMatchNumberOfPlayersRequired = game.min_players : true"
-        type="range"
         v-bind:min="game.min_players"
         v-bind:max="game.max_players"
       ></b-form-input>
@@ -89,16 +91,20 @@ export default {
     ...mapState([
       'game',
       'refreshingMatchs', 'matchs'
-    ])
+    ]),
+    stylizedMatchs() {
+      return this.matchs.map(x => {
+        return Object.assign({
+          _rowVariant: x.ended_at == null ? 'success' : 'light'
+        }, x)
+      })
+    }
   },
   methods: {
     ...mapActions([
       'refreshGame',
       'refreshMatchs', 'createMatch'
-    ]),
-    doCreateMatch() {
-      this.createMatch(this.newMatchNumberOfPlayersRequired)
-    }
+    ])
   }
 }
 </script>
