@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { BNavbar, BNavbarBrand, BNavItem, BNavItemDropdown, BDropdownItem, CardPlugin } from 'bootstrap-vue'
+import { BNavbar, BNavbarBrand, BNavItem, BNavItemDropdown } from 'bootstrap-vue'
 import store from '@/store'
 import Header from '@/components/Core/Header.vue'
 
