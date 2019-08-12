@@ -21,8 +21,8 @@ It must implement the [`plateau/server.Game`](server/game.go) interface.
 - `plateau/store.Transaction`
 - `plateau/protocol`
 
-### Vue.js frontend
+### [Vue.js frontend](vue/plateau)
 
-The frontend is "game-agnostic".
+This frontend is "game-agnostic" but you can customize the [`Match`](vue/plateau/src/components/Core/Match.vue) component to better fit your game.
 
-You can customize the [`Match`](vue/plateau/src/components/Core/Match.vue) component to have a frontend that better fit your game.
+**N.B**: *Plateau* exposes a [REST API](server/server.go) so you can easily build another frontend from scratch.
