@@ -194,83 +194,37 @@ EOF
     cat > vue/plateau/README.md <<EOF
 # Plateau - $1
 
-## Development mode
+## Build
+
+```bash
+npm run build
+```
+
+## Other `run` subcommands
+
+- Unit test
+
+```bash
+npm run test:unit
+```
+
+- Lint
+
+```bash
+npm run lint
+```
+
+- Server aka "development mode"
 
 1. Run `plateau run` with the `-l :3000` parameter.
-2.
+2. 
 ```bash
 NODE_DEV_PROXY_API=http://localhost:3000 \
     npm run serve
 ```
-
 EOF
 
     popd
-
-    echo "Done"
-}
-
-_tpg_req() {
-    [[ ! $(which curl jq) || -z $1 ]] && return 1 
-
-    local \
-        BASE=${TPG_PLATEAU_BASEURL:-http://localhost:3000} \
-        COOKIE_NAME=plateau \
-        COOKIE_FILE=$1.cookie \
-        USERINFO="{\"username\":\"$1\",\"password\":\"$1\"}"
-
-    curl $BASE/user/register -d $USERINFO &>/dev/null
-    curl $BASE/user/login --cookie-jar $COOKIE_FILE -d $USERINFO 2>/dev/null
-
-    local match_id=$(curl -b $COOKIE_FILE $BASE/api/matchs 2>/dev/null | jq -r '.[0]')
-
-    [[ $match_id == "null" ]] && \
-    match_id=$(curl 2>/dev/null -b $COOKIE_FILE -X POST $BASE/api/matchs \
-        -d '{"number_of_players_required":2}' | jq -r .id)
-
-    curl $BASE/api/matchs/$match_id$2 -s -b $COOKIE_FILE ${@:3} 2>/dev/null | jq .
-
-    [[ ${PIPESTATUS[0]} -eq 0 ]]
-}
-
-tpg_cleanup() {
-    [[ -z $1 ]] && return 1
-
-    rm -f $1.cookie
-}
-
-tpg_match() {
-    [[ -z $1 ]] && return 1
-
-    _tpg_req $1 /
-}
-
-tpg_deals() {
-    [[ -z $1 ]] && return 1
-
-    _tpg_req $1 /deals
-}
-
-tpg_send() {
-    [[ -z $1 || -z $2 ]] && return 1
-
-    _tpg_req $1 / -X PATCH -d "{\"request\":\"$2\"}"
-}
-
-tpg_setupmatch() {
-    [[ -z $1 ]] && return 1 
-
-    for p in "$@"
-    do
-        tpg_send $p PLAYER_WANT_TO_JOIN || return 1
-    done
-
-    tpg_send $1 PLAYER_WANT_TO_START_THE_MATCH || return 1
-
-    for p in "$@"
-    do
-        tpg_send $p PLAYER_ACCEPTS || return 1
-    done
 
     echo "Done"
 }

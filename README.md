@@ -12,14 +12,12 @@
 
 > Build your own board game server. Batteries included!
 
-## Let's go
+## Basics
 
 The code in this repository will build the binary for the [Rock–paper–scissors](https://en.wikipedia.org/wiki/Rock%E2%80%93paper%E2%80%93scissors) game.
 
-**Please read [these instructions](CUSTOMIZING.md) is you want to customize *plateau* for another game.**
-
 ```bash
-# Build to use the process memory as the store.
+# Build to use the memory of the process as the store.
 go build -tags="run_rockpaperscissors run_inmemory" -o dist/plateau 
 
 # Start the server.
@@ -39,25 +37,4 @@ docker build --build-arg PACKAGING=full -t my-plateau .
 docker run -d -p 8080:80 -e LISTEN=80 -e SESSION_KEY=my-STRONG-secret my-plateau
 ```
 
-**N.B.** Parameters to the `run` subcommand may vary function of the flags declared by `store.RunCommandSetter(*cobra.Command)` (and thus by the implementation of `store.Store`).
-
-## Test Rock–paper–scissors
-
-```bash
-. helpers.bash
-
-# Setup a match with P1 (player 1) and P2 (player 2) as participants.
-tpg_setupmatch P1 P2
-
-# Send a request from P1 and P2 perspective.
-tpg_send P1 ?
-tpg_send P2 ? 
-# tpg_send P1 PLAY_ROCK
-# tpg_send P1 PLAY_PAPER
-
-# Show the match from the perspective of P1.
-tpg_match P1
-
-# Show the deals of the matchs from the perspective of P1.
-tpg_deals P1
-```
+## [Customizing](CUSTOMIZING.md)

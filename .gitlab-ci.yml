@@ -30,6 +30,42 @@ node:unit tests:
     - npm install
     - npm run test:unit
 
+node:lint:
+  stage: unit tests
+  image: node:11.3
+  before_script:
+    - cd vue/plateau/
+  script:
+    - npm install
+    - npm run lint
+
+bash:unit tests:
+  stage: unit tests
+  services:
+    - docker:dind
+  image: docker
+  variables:
+    BASH_ASSERT_IMAGE: $CI_REGISTRY/le-garff-yoann/docker-bash-assert
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
+  script:
+    - docker pull $BASH_ASSERT_IMAGE
+    - >
+      docker run -d --link plateau --name assert
+      --entrypoint sleep
+      $BASH_ASSERT_IMAGE
+      300
+    - |
+      for f in *.bash
+      do
+        docker cp $f assert:/tmp
+      done
+    - >
+      docker exec
+      -w /tmp
+      assert
+      bash helpers_test.bash
+
 go:build:
   stage: build
   before_script:
@@ -58,6 +94,7 @@ node:build:
       - vue/plateau/dist/
   dependencies:
     - node:unit tests
+    - node:lint
 
 docker:build:full:
   stage: docker build
@@ -70,45 +107,9 @@ docker:build:full:
     - docker build --build-arg PACKAGING=full -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
     - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
   dependencies:
-    - go:build
+    - bash:unit tests
     - node:build
-
-bash:helpers:integration tests:
-  stage: integration tests
-  services:
-    - docker:dind
-  image: docker
-  variables:
-    PLATEAU_IMAGE: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
-    BASH_ASSERT_IMAGE: $CI_REGISTRY/le-garff-yoann/docker-bash-assert
-  before_script:
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
-  script:
-    - docker pull $PLATEAU_IMAGE
-    - docker pull $BASH_ASSERT_IMAGE
-    - >
-      docker run -d --name plateau
-      $PLATEAU_IMAGE
-      run -l :3000 --session-key s
-    - sleep 10
-    - >
-      docker run -d --link plateau --name assert
-      --entrypoint sleep
-      $BASH_ASSERT_IMAGE
-      300
-    - |
-      for f in *.bash
-      do
-        docker cp $f assert:/tmp
-      done
-    - >
-      docker exec
-      -w /tmp
-      -e TPG_PLATEAU_BASEURL=http://plateau:3000
-      assert
-      bash helpers_test.bash
-  dependencies:
-    - docker:build:full
+    - go:build
 
 docker:release:full:
   stage: docker release
@@ -124,7 +125,8 @@ docker:release:full:
     - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" "${CI_REGISTRY_IMAGE}:latest"
     - docker push "${CI_REGISTRY_IMAGE}:latest"
   dependencies:
+    - bash:unit tests
+    - node:build
     - go:build
-    - bash:helpers:integration tests
   only:
     - tags
