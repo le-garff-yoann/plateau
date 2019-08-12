@@ -51,7 +51,7 @@ bash:unit tests:
   script:
     - docker pull $BASH_ASSERT_IMAGE
     - >
-      docker run -d --link plateau --name assert
+      docker run -d --name assert
       --entrypoint sleep
       $BASH_ASSERT_IMAGE
       300
