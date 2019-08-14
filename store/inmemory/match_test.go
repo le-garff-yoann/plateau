@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"plateau/protocol"
 	"plateau/store"
-	"sync"
 	"testing"
 	"time"
 
@@ -216,47 +215,4 @@ func TestMatchPlayerLeaves(t *testing.T) {
 
 	require.IsType(t, store.PlayerParticipationError(""),
 		trn.MatchPlayerLeaves(id, "foo"))
-}
-
-func TestMatchNotificationIterator(t *testing.T) {
-	t.Parallel()
-
-	s := &Store{}
-
-	require.NoError(t, s.Open())
-	defer func() {
-		require.NoError(t, s.Close())
-	}()
-
-	trn := s.BeginTransaction()
-
-	id, err := trn.MatchCreate(protocol.Match{})
-	require.NoError(t, err)
-
-	itr, err := s.CreateMatchNotificationsIterator(id)
-	require.NoError(t, err)
-
-	var wg sync.WaitGroup
-
-	wg.Add(2)
-
-	go func() {
-		var matchNotification store.MatchNotification
-
-		for itr.Next(&matchNotification) {
-			wg.Done()
-		}
-	}()
-
-	err = trn.MatchCreateDeal(id, protocol.Deal{})
-	require.NoError(t, err)
-
-	err = trn.MatchEndedAt(id, time.Now())
-	require.NoError(t, err)
-
-	trn.Commit()
-
-	wg.Wait()
-
-	require.NoError(t, itr.Close())
 }

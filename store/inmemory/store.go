@@ -79,9 +79,23 @@ func (s *Store) BeginTransaction(scopes ...store.TransactionScope) store.Transac
 		closed:       false,
 		commitCb: func(trn *Transaction) {
 			for _, n := range trn.matchNotifications {
-				s.matchNotificationsBroadcaster.Submit(&n)
+				s.matchNotificationsBroadcaster.Submit(n)
 			}
 		},
 		done: func(_ *Transaction) { s.inMemoryMux.Unlock() },
 	}
+}
+
+// RegisterNotificationsChannel implements the `store.Store` interface.
+func (s *Store) RegisterNotificationsChannel(ch chan interface{}) error {
+	s.matchNotificationsBroadcaster.Register(ch)
+
+	return nil
+}
+
+// UnregisterNotificationsChannel implements the `store.Store` interface.
+func (s *Store) UnregisterNotificationsChannel(ch chan interface{}) error {
+	s.matchNotificationsBroadcaster.Unregister(ch)
+
+	return nil
 }

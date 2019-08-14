@@ -162,43 +162,9 @@ func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	done := make(chan int)
-
-	s.doneWg.Add(1)
-	defer s.doneWg.Done()
-
-	srvDoneCh, srvDoneUUID := s.doneBroadcaster.Subscribe()
-	defer s.doneBroadcaster.Unsubscribe(srvDoneUUID)
-
-	mRuntime, err := s.guardRuntime(match.ID)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-
-		return
-	}
-	defer s.unguardRuntime(match.ID)
-
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			case <-srvDoneCh:
-				s.unguardRuntime(match.ID)
-
-				s.doneBroadcaster.Unsubscribe(srvDoneUUID)
-				s.doneWg.Done()
-
-				return
-			}
-		}
-	}()
-	defer func() {
-		done <- 0
-	}()
-
-	ch, UUID := mRuntime.matchNotificationsBroadcaster.Subscribe()
-	defer mRuntime.matchNotificationsBroadcaster.Unsubscribe(UUID)
+	ch := make(chan interface{})
+	s.store.RegisterNotificationsChannel(ch)
+	defer s.store.UnregisterNotificationsChannel(ch)
 
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -214,26 +180,27 @@ func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.
 			return
 		}
 
-		matchNotification := v.(store.MatchNotification)
+		matchNotification, ok := v.(store.MatchNotification)
+		if ok && matchNotification.ID == match.ID {
+			logCtx := logrus.
+				WithField("match", match.ID)
 
-		logCtx := logrus.
-			WithField("match", match.ID)
+			logCtx.Debug(matchNotification)
 
-		logCtx.Debug(matchNotification)
+			jsonb, err := json.Marshal(matchNotification)
+			if err != nil {
+				logCtx.Panic(err)
+			}
 
-		jsonb, err := json.Marshal(matchNotification)
-		if err != nil {
-			logCtx.Panic(err)
+			_, err = fmt.Fprintf(w, "data: %s\n\n", string(jsonb))
+			if err != nil {
+				logCtx.Warning(err)
+
+				return
+			}
+
+			flusher.Flush()
 		}
-
-		_, err = fmt.Fprintf(w, "data: %s\n\n", string(jsonb))
-		if err != nil {
-			logCtx.Warning(err)
-
-			return
-		}
-
-		flusher.Flush()
 	}
 }
 

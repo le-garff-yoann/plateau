@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"plateau/broadcaster"
 	"plateau/protocol"
 	"plateau/server/response/body"
 	"plateau/store"
@@ -13,41 +12,12 @@ func (s *Server) guardRuntime(matchID string) (*matchRuntime, error) {
 	defer s.matchRuntimesMux.Unlock()
 
 	if _, ok := s.matchRuntimes[matchID]; !ok {
-		iterator, err := s.store.CreateMatchNotificationsIterator(matchID)
-		if err != nil {
-			return nil, err
-		}
-
 		mRuntime := &matchRuntime{
-			game:                          s.game,
-			matchID:                       matchID,
-			matchNotificationsBroadcaster: broadcaster.New(),
-			done:                          make(chan int),
+			game:    s.game,
+			matchID: matchID,
 		}
 
 		s.matchRuntimes[matchID] = mRuntime
-
-		go mRuntime.matchNotificationsBroadcaster.Run()
-
-		go func() {
-			var matchNotification store.MatchNotification
-
-			for iterator.Next(&matchNotification) {
-				func(r *matchRuntime) {
-					r.matchNotificationsBroadcaster.Submit(matchNotification)
-				}(mRuntime)
-			}
-		}()
-
-		go func(r *matchRuntime) {
-			<-r.done
-
-			r.matchNotificationsBroadcaster.Done()
-
-			if iterator.Close() == nil {
-				return
-			}
-		}(mRuntime)
 	}
 
 	s.matchRuntimes[matchID].guard++
@@ -63,8 +33,6 @@ func (s *Server) unguardRuntime(matchID string) bool {
 	if ok {
 		r.guard--
 		if r.guard == 0 {
-			s.matchRuntimes[matchID].done <- 0
-
 			delete(s.matchRuntimes, matchID)
 		}
 	}
@@ -77,10 +45,6 @@ type matchRuntime struct {
 
 	matchID string
 	guard   int
-
-	matchNotificationsBroadcaster *broadcaster.Broadcaster
-
-	done chan int
 }
 
 func (s *matchRuntime) reqContainerHandler(trn store.Transaction, reqContainer *protocol.RequestContainer) *protocol.ResponseContainer {
