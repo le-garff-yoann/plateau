@@ -30,6 +30,7 @@
             class="players"
             :items="players"
             v-show="!refreshingPlayers"
+            show-empty
           >
           </b-table>
         </b-col>
