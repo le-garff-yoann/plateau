@@ -2,6 +2,8 @@ package inmemory
 
 import (
 	"plateau/store"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Transaction implements the `store.Transaction` interface.
@@ -25,7 +27,7 @@ func (s *Transaction) close() {
 // Commit implements the `store.Transaction` interface.
 func (s *Transaction) Commit() {
 	if s.Closed() {
-		panic("You cannot commit a closed transaction")
+		logrus.Panic("You cannot commit a closed transaction")
 	}
 
 	*s.inMemory = *s.inMemoryCopy
@@ -37,7 +39,7 @@ func (s *Transaction) Commit() {
 // Abort implements the `store.Transaction` interface.
 func (s *Transaction) Abort() {
 	if s.Closed() {
-		panic("You cannot abort a closed transaction")
+		logrus.Panic("You cannot abort a closed transaction")
 	}
 
 	s.close()

@@ -223,7 +223,7 @@ func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.
 
 		jsonb, err := json.Marshal(matchNotification)
 		if err != nil {
-			panic(err)
+			logCtx.Panic(err)
 		}
 
 		_, err = fmt.Fprintf(w, "data: %s\n\n", string(jsonb))
@@ -353,7 +353,7 @@ func (s *Server) patchMatchHandler(w http.ResponseWriter, r *http.Request) {
 
 	resContainer := mRuntime.reqContainerHandler(trn, &reqContainer)
 	if !trn.Closed() {
-		panic("Transaction not closed")
+		logCtx.Panic("Transaction not closed")
 	}
 
 	logCtx.
