@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"plateau/broadcaster"
 	"plateau/store"
 	"sync"
 
@@ -24,17 +23,15 @@ type Server struct {
 	router     *mux.Router
 	httpServer *http.Server
 
-	doneBroadcaster *broadcaster.Broadcaster
-	doneWg          sync.WaitGroup
+	doneWg sync.WaitGroup
 }
 
 // New initializes the `Game` *gm* and returns a new `Server`.
 func New(gm Game, str store.Store) (*Server, error) {
 	s := &Server{
-		game:            gm,
-		matchRuntimes:   make(map[string]*matchRuntime),
-		store:           str,
-		doneBroadcaster: broadcaster.New(),
+		game:          gm,
+		matchRuntimes: make(map[string]*matchRuntime),
+		store:         str,
 	}
 
 	if err := gm.Init(); err != nil {
@@ -141,29 +138,16 @@ func (s *Server) Start() error {
 		return err
 	}
 
-	go s.doneBroadcaster.Run()
-
 	s.doneWg.Add(1)
-
-	ch := make(chan interface{})
-	s.doneBroadcaster.Register(ch)
-
-	go func() {
-		<-ch
-
-		s.doneBroadcaster.Unregister(ch)
-		s.doneWg.Done()
-	}()
 
 	return nil
 }
 
 // Stop stops the server.
 func (s *Server) Stop() error {
-	s.doneBroadcaster.Submit(0)
-	s.doneWg.Wait()
+	s.doneWg.Done()
 
-	s.doneBroadcaster.Done()
+	s.doneWg.Wait()
 
 	return s.store.Close()
 }

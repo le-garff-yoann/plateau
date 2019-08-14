@@ -255,16 +255,10 @@ func (s *Server) patchMatchHandler(w http.ResponseWriter, r *http.Request) {
 	var (
 		username = session.Values["username"].(string)
 		matchID  = mux.Vars(r)["id"]
-
-		done = make(chan int)
 	)
 
 	s.doneWg.Add(1)
 	defer s.doneWg.Done()
-
-	srvDoneCh := make(chan interface{})
-	s.doneBroadcaster.Register(srvDoneCh)
-	defer s.doneBroadcaster.Unregister(srvDoneCh)
 
 	mRuntime, err := s.guardRuntime(matchID)
 	if err != nil {
@@ -273,25 +267,6 @@ func (s *Server) patchMatchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer s.unguardRuntime(matchID)
-
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			case <-srvDoneCh:
-				s.unguardRuntime(matchID)
-
-				s.doneBroadcaster.Unregister(srvDoneCh)
-				s.doneWg.Done()
-
-				return
-			}
-		}
-	}()
-	defer func() {
-		done <- 0
-	}()
 
 	logCtx := logrus.
 		WithField("match", matchID).
