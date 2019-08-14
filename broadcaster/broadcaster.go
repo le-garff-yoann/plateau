@@ -2,8 +2,6 @@ package broadcaster
 
 import (
 	"sync"
-
-	uuid "github.com/satori/go.uuid"
 )
 
 // Broadcaster delivers data from the emitter to his subscriber.
@@ -11,7 +9,7 @@ type Broadcaster struct {
 	mux sync.RWMutex
 
 	emitter     chan interface{}
-	subscribers map[uuid.UUID]chan interface{}
+	subscribers map[chan<- interface{}]int
 
 	done chan int
 }
@@ -20,7 +18,7 @@ type Broadcaster struct {
 func New() *Broadcaster {
 	return &Broadcaster{
 		emitter:     make(chan interface{}),
-		subscribers: make(map[uuid.UUID]chan interface{}),
+		subscribers: make(map[chan<- interface{}]int),
 		done:        make(chan int),
 	}
 }
@@ -30,26 +28,27 @@ func (s *Broadcaster) Submit(e interface{}) {
 	s.emitter <- e
 }
 
-// Subscribe subscribes a new client for receiving data emitted with `Submit`.
-func (s *Broadcaster) Subscribe() (<-chan interface{}, uuid.UUID) {
+// Register registers a new channel for receiving data emitted with `Submit`.
+func (s *Broadcaster) Register(ch chan interface{}) bool {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
-	uuid := uuid.NewV4()
+	_, ok := s.subscribers[ch]
+	if !ok {
+		s.subscribers[ch] = 0
+	}
 
-	s.subscribers[uuid] = make(chan interface{})
-
-	return s.subscribers[uuid], uuid
+	return !ok
 }
 
-// Unsubscribe unsubscribes the client based on the `UUID` which was returned by `Subscribe`.
-func (s *Broadcaster) Unsubscribe(uuid uuid.UUID) bool {
+// Unregister unregisters the given channel.
+func (s *Broadcaster) Unregister(ch chan interface{}) bool {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
-	_, ok := s.subscribers[uuid]
+	_, ok := s.subscribers[ch]
 	if ok {
-		delete(s.subscribers, uuid)
+		delete(s.subscribers, ch)
 	}
 
 	return ok
@@ -64,8 +63,8 @@ func (s *Broadcaster) Run() {
 				s.mux.RLock()
 				defer s.mux.RUnlock()
 
-				for _, rs := range s.subscribers {
-					go func(rs chan interface{}) {
+				for rs := range s.subscribers {
+					go func(rs chan<- interface{}) {
 						rs <- ec
 					}(rs)
 				}
@@ -76,7 +75,9 @@ func (s *Broadcaster) Run() {
 	}
 }
 
-// Done stops the broadcaster.
+// Done stops the broadcaster and closes the emitter.
 func (s *Broadcaster) Done() {
 	s.done <- 0
+
+	close(s.emitter)
 }

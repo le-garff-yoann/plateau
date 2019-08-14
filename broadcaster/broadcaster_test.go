@@ -19,14 +19,18 @@ func TestBroadcaster(t *testing.T) {
 		a = 0
 		b = 0
 
-		chA, uuidA = br.Subscribe()
+		chA = make(chan interface{})
 	)
+
+	require.True(t, br.Register(chA))
+	require.False(t, br.Register(chA))
 
 	require.Len(t, br.subscribers, 1)
 
 	go br.Run()
 
-	chB, uuidB := br.Subscribe()
+	chB := make(chan interface{})
+	require.True(t, br.Register(chB))
 	require.Len(t, br.subscribers, 2)
 
 	wg.Add(i * 2)
@@ -54,8 +58,10 @@ func TestBroadcaster(t *testing.T) {
 	for j := 0; j < i; j++ {
 		go br.Submit(j)
 
-		_, UUID := br.Subscribe()
-		br.Unsubscribe(UUID)
+		ch := make(chan interface{})
+		br.Register(ch)
+
+		br.Unregister(ch)
 	}
 
 	wg.Wait()
@@ -63,8 +69,8 @@ func TestBroadcaster(t *testing.T) {
 	require.Equal(t, i, a)
 	require.Equal(t, i, b)
 
-	require.True(t, br.Unsubscribe(uuidA))
-	require.True(t, br.Unsubscribe(uuidB))
+	require.True(t, br.Unregister(chA))
+	require.True(t, br.Unregister(chB))
 
 	require.Empty(t, br.subscribers)
 }

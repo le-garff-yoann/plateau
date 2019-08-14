@@ -144,12 +144,14 @@ func (s *Server) Start() error {
 	go s.doneBroadcaster.Run()
 
 	s.doneWg.Add(1)
-	ch, uuid := s.doneBroadcaster.Subscribe()
+
+	ch := make(chan interface{})
+	s.doneBroadcaster.Register(ch)
 
 	go func() {
 		<-ch
 
-		s.doneBroadcaster.Unsubscribe(uuid)
+		s.doneBroadcaster.Unregister(ch)
 		s.doneWg.Done()
 	}()
 

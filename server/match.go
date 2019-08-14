@@ -295,8 +295,9 @@ func (s *Server) patchMatchHandler(w http.ResponseWriter, r *http.Request) {
 	s.doneWg.Add(1)
 	defer s.doneWg.Done()
 
-	srvDoneCh, srvDoneUUID := s.doneBroadcaster.Subscribe()
-	defer s.doneBroadcaster.Unsubscribe(srvDoneUUID)
+	srvDoneCh := make(chan interface{})
+	s.doneBroadcaster.Register(srvDoneCh)
+	defer s.doneBroadcaster.Unregister(srvDoneCh)
 
 	mRuntime, err := s.guardRuntime(matchID)
 	if err != nil {
@@ -314,7 +315,7 @@ func (s *Server) patchMatchHandler(w http.ResponseWriter, r *http.Request) {
 			case <-srvDoneCh:
 				s.unguardRuntime(matchID)
 
-				s.doneBroadcaster.Unsubscribe(srvDoneUUID)
+				s.doneBroadcaster.Unregister(srvDoneCh)
 				s.doneWg.Done()
 
 				return
