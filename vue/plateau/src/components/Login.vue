@@ -8,7 +8,7 @@
 
     <Messages />
 
-    <b-row align-h="center">
+    <b-row align-h="center" class="pt-4">
       <b-col md="5">
         <b-spinner
           v-show="loggingIn || registerIn"
