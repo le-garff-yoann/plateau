@@ -51,7 +51,7 @@ func Init(listener, listenerStaticDir string, gm Game, str store.Store, sessionS
 	}
 
 	if len(sessionStore) == 0 {
-		sessionStore[0] = sessions.NewCookieStore()
+		sessionStore = append(sessionStore, sessions.NewCookieStore([]byte("")))
 	}
 	s.sessionStore = sessionStore[0]
 
