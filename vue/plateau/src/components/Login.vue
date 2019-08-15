@@ -6,7 +6,7 @@
       </b-col>
     </b-row>
 
-    <Messages />
+    <Messages class="pt-4" />
 
     <b-row align-h="center" class="pt-4">
       <b-col md="5">
