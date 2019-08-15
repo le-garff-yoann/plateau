@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 )
 
 // ServerName is the server name.
@@ -18,7 +19,8 @@ type Server struct {
 	matchRuntimesMux sync.Mutex
 	matchRuntimes    map[string]*matchRuntime
 
-	store store.Store
+	store        store.Store
+	sessionStore sessions.Store
 
 	router     *mux.Router
 	httpServer *http.Server
@@ -41,12 +43,17 @@ func New(gm Game, str store.Store) (*Server, error) {
 	return s, nil
 }
 
-// Init returns a new `Server` with in addition the *gorilla/mux* router initialized.
-func Init(listener, listenerStaticDir string, gm Game, str store.Store) (*Server, error) {
+// Init returns a new `Server` with in addition the *gorilla/mux* router and the *sessionStore* initialized.
+func Init(listener, listenerStaticDir string, gm Game, str store.Store, sessionStore ...sessions.Store) (*Server, error) {
 	s, err := New(gm, str)
 	if err != nil {
-
+		return nil, err
 	}
+
+	if len(sessionStore) == 0 {
+		sessionStore[0] = sessions.NewCookieStore()
+	}
+	s.sessionStore = sessionStore[0]
 
 	s.router = mux.NewRouter().StrictSlash(true)
 	s.httpServer = &http.Server{

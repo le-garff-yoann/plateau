@@ -1,7 +1,6 @@
 package store
 
 import (
-	"github.com/gorilla/sessions"
 	"github.com/spf13/cobra"
 )
 
@@ -16,8 +15,6 @@ type Store interface {
 	Close() error
 
 	RunCommandSetter(*cobra.Command)
-
-	Sessions() sessions.Store
 
 	BeginTransaction(...TransactionScope) Transaction
 

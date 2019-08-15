@@ -5,13 +5,11 @@ import (
 	"plateau/store"
 	"sync"
 
-	"github.com/gorilla/sessions"
 	"github.com/spf13/cobra"
 )
 
 var (
-	sessionKeys = []string{""}
-
+	sessionKeys   = []string{""}
 	sessionMaxAge = 86400 * 30
 )
 
@@ -21,8 +19,6 @@ type Store struct {
 
 	inMemory                      *inMemory
 	matchNotificationsBroadcaster *broadcaster.Broadcaster
-
-	sessionStore sessions.Store
 }
 
 // Open implements the `store.Store` interface.
@@ -31,16 +27,6 @@ func (s *Store) Open() error {
 
 	s.matchNotificationsBroadcaster = broadcaster.New()
 	go s.matchNotificationsBroadcaster.Run()
-
-	var byteSessionKeys [][]byte
-	for _, sessionKey := range sessionKeys {
-		byteSessionKeys = append(byteSessionKeys, []byte(sessionKey))
-	}
-
-	sessionStore := sessions.NewCookieStore(byteSessionKeys...)
-	sessionStore.MaxAge(sessionMaxAge)
-
-	s.sessionStore = sessionStore
 
 	return nil
 }
@@ -53,21 +39,7 @@ func (s *Store) Close() error {
 }
 
 // RunCommandSetter implements the `store.Store` interface.
-func (s *Store) RunCommandSetter(runCmd *cobra.Command) {
-	runCmd.
-		Flags().
-		StringArrayVar(&sessionKeys, "session-key", sessionKeys, `Session ("secret") key`)
-	runCmd.MarkFlagRequired("session-key")
-
-	runCmd.
-		Flags().
-		IntVar(&sessionMaxAge, "session-max-age", sessionMaxAge, "Sets the maximum duration of cookies in seconds")
-}
-
-// Sessions implements the `store.Store` interface.
-func (s *Store) Sessions() sessions.Store {
-	return s.sessionStore
-}
+func (s *Store) RunCommandSetter(runCmd *cobra.Command) {}
 
 // BeginTransaction implements the `store.Store` interface.
 func (s *Store) BeginTransaction(scopes ...store.TransactionScope) store.Transaction {

@@ -31,7 +31,7 @@ func (s *loginCredentials) VerifyHash(h []byte) bool {
 
 func (s *Server) loginMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := s.store.Sessions().Get(r, ServerName)
+		session, err := s.sessionStore.Get(r, ServerName)
 		if err != nil {
 			response.WriteJSON(w, http.StatusForbidden, body.New().Ko(err))
 
@@ -123,7 +123,7 @@ func (s *Server) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if cred.VerifyHash([]byte(player.Password)) {
-		session, err := s.store.Sessions().Get(r, ServerName)
+		session, err := s.sessionStore.Get(r, ServerName)
 		if err != nil {
 			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
@@ -146,7 +146,7 @@ func (s *Server) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := s.store.Sessions().Get(r, ServerName)
+	session, err := s.sessionStore.Get(r, ServerName)
 	if err != nil {
 		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 

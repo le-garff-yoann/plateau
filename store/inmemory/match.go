@@ -98,7 +98,7 @@ func (s *Transaction) MatchList() (IDs []string, err error) {
 }
 
 // MatchCreate implements the `store.Transaction` interface.
-func (s *Transaction) MatchCreate(m protocol.Match) (id string, err error) {
+func (s *Transaction) MatchCreate(m protocol.Match) (_ string, err error) {
 	defer func() {
 		if err != nil {
 			s.errors = append(s.errors, err)

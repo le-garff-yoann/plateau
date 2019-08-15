@@ -226,7 +226,7 @@ func (s *Server) getMatchDealsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var playerName []string
 	if !match.IsEnded() {
-		session, err := s.store.Sessions().Get(r, ServerName)
+		session, err := s.sessionStore.Get(r, ServerName)
 		if err != nil {
 			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
@@ -245,7 +245,7 @@ func (s *Server) getMatchDealsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) patchMatchHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := s.store.Sessions().Get(r, ServerName)
+	session, err := s.sessionStore.Get(r, ServerName)
 	if err != nil {
 		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 

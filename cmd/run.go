@@ -6,6 +6,7 @@ import (
 	"plateau/server"
 	"syscall"
 
+	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	// TODO: Add a little bit of "viper".
@@ -20,10 +21,19 @@ var (
 
 			logrus.Info("Starting the server....")
 
+			var byteSessionKeys [][]byte
+			for _, sessionKey := range sessionKeys {
+				byteSessionKeys = append(byteSessionKeys, []byte(sessionKey))
+			}
+
+			sessionStore := sessions.NewCookieStore(byteSessionKeys...)
+			sessionStore.MaxAge(sessionMaxAge)
+
 			srv, err := server.Init(
 				serverListener, serverListenerStaticDir,
 				gm,
 				str,
+				sessionStore,
 			)
 			if err != nil {
 				logrus.Fatal(err)
@@ -64,6 +74,14 @@ func init() {
 	runCmd.
 		Flags().
 		StringVar(&serverListenerStaticDir, "listen-static-dir", serverListenerStaticDir, "Exposes the contents of this directory at /")
+
+	runCmd.
+		Flags().
+		StringArrayVar(&sessionKeys, "session-key", sessionKeys, `Session ("secret") key`)
+	runCmd.MarkFlagRequired("session-key")
+	runCmd.
+		Flags().
+		IntVar(&sessionMaxAge, "session-max-age", sessionMaxAge, "Sets the maximum duration of cookies in seconds")
 
 	runCmd.Flags().Var(&logLevel, "log-level", "Logrus log level")
 

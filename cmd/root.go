@@ -15,6 +15,9 @@ import (
 const AppName = server.ServerName
 
 var (
+	sessionKeys   = []string{""}
+	sessionMaxAge = 86400 * 30
+
 	serverListener, serverListenerStaticDir string
 	logLevel                                = pflag.LogrusLevel(logrus.InfoLevel)
 	gm                                      server.Game
