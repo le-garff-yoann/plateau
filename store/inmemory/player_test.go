@@ -18,7 +18,8 @@ func TestPlayerList(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	names, err := trn.PlayerList()
 	require.NoError(t, err)
@@ -46,7 +47,8 @@ func TestPlayerCreate(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	require.NoError(t, trn.PlayerCreate(player))
 
@@ -72,7 +74,8 @@ func TestPlayerRead(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	require.NoError(t, trn.PlayerCreate(player))
 
@@ -98,7 +101,8 @@ func TestPlayerIncreaseWins(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	require.NoError(t, trn.PlayerCreate(player))
 
@@ -125,7 +129,8 @@ func TestPlayerIncreaseLoses(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	require.NoError(t, trn.PlayerCreate(player))
 
@@ -152,7 +157,8 @@ func TestPlayerIncreaseTies(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	require.NoError(t, trn.PlayerCreate(player))
 

@@ -35,8 +35,11 @@ func (s *TestMatchRuntime) Store() store.Store {
 // TestRequest sends *req* as player *playerName* and expects
 // that the answer returned is equal to *expectedRes*.
 func (s *TestMatchRuntime) TestRequest(playerName string, req protocol.Request, expectedRes protocol.Response) {
+	trn, err := s.Store().BeginTransaction()
+	require.NoError(s.T, err)
+
 	require.Equal(s.T, expectedRes, s.reqContainerHandlerFunc()(
-		s.Store().BeginTransaction(),
+		trn,
 		&protocol.RequestContainer{
 			Request: req,
 			Player:  &protocol.Player{Name: playerName},
@@ -64,7 +67,8 @@ func SetupTestMatchRuntime(t *testing.T, testMatchRuntime *TestMatchRuntime) {
 
 	require.NoError(t, testMatchRuntime.Store().Open())
 
-	trn := testMatchRuntime.Store().BeginTransaction()
+	trn, err := testMatchRuntime.Store().BeginTransaction()
+	require.NoError(t, err)
 
 	id, err := trn.MatchCreate(testMatchRuntime.Match)
 	require.NoError(t, err)

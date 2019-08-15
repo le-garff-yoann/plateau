@@ -31,7 +31,8 @@ func TestGameRuntime(t *testing.T) {
 		// Force the creation of the first deal.
 		testMatchRuntime.TestRequest("foo", protocol.ReqListRequests, protocol.ResOK)
 
-		trn := testMatchRuntime.Store().BeginTransaction()
+		trn, err := testMatchRuntime.Store().BeginTransaction()
+		require.NoError(t, err)
 
 		match, err := trn.MatchRead(testMatchRuntime.Match.ID)
 		require.NoError(t, err)
@@ -42,7 +43,8 @@ func TestGameRuntime(t *testing.T) {
 
 		testMatchRuntime.TestRequest(initialHolder.Name, reqA, protocol.ResOK)
 
-		trn = testMatchRuntime.Store().BeginTransaction()
+		trn, err = testMatchRuntime.Store().BeginTransaction()
+		require.NoError(t, err)
 
 		match, err = trn.MatchRead(testMatchRuntime.Match.ID)
 		require.NoError(t, err)
@@ -53,7 +55,8 @@ func TestGameRuntime(t *testing.T) {
 
 		testMatchRuntime.TestRequest(match.NextPlayer(initialHolder).Name, reqB, protocol.ResOK)
 
-		trn = testMatchRuntime.Store().BeginTransaction()
+		trn, err = testMatchRuntime.Store().BeginTransaction()
+		require.NoError(t, err)
 
 		match, err = trn.MatchRead(testMatchRuntime.Match.ID)
 		require.NoError(t, err)

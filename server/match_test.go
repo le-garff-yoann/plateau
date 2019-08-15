@@ -43,7 +43,8 @@ func TestGetMatchIDsHandlerHandler(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code)
 	require.JSONEq(t, "[]", rr.Body.String())
 
-	trn := srv.store.BeginTransaction()
+	trn, err := srv.store.BeginTransaction()
+	require.NoError(t, err)
 
 	id, err := trn.MatchCreate(protocol.Match{})
 	require.NoError(t, err)
@@ -139,7 +140,8 @@ func TestMatchPlayersNameHandler(t *testing.T) {
 
 	testRegisterAndLoginHandlers(t, srv, player.Name, player.Password)
 
-	trn := srv.store.BeginTransaction()
+	trn, err := srv.store.BeginTransaction()
+	require.NoError(t, err)
 
 	require.NoError(t, trn.MatchPlayerJoins(match.ID, player.Name))
 	trn.Commit()
@@ -242,7 +244,8 @@ func TestStreamMatchNotificationsHandler(t *testing.T) {
 	// 	}
 	// }()
 
-	// trn := srv.store.BeginTransaction()
+	// trn, err := srv.store.BeginTransaction()
+	// require.NoError(t, err)
 
 	// trn.MatchEndedAt(match.ID, time.Now())
 
@@ -254,7 +257,8 @@ func TestStreamMatchNotificationsHandler(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, newRecorder(true).Code)
 
-	trn := srv.store.BeginTransaction()
+	trn, err := srv.store.BeginTransaction()
+	require.NoError(t, err)
 
 	require.NoError(t, trn.MatchEndedAt(match.ID, time.Now()))
 	trn.Commit()
@@ -278,9 +282,10 @@ func TestMatchDealsHandler(t *testing.T) {
 
 		match  = testCreateAndReadMatchHandler(t, srv)
 		player = protocol.Player{Name: "foo", Password: "foo"}
-
-		trn = srv.store.BeginTransaction()
 	)
+
+	trn, err := srv.store.BeginTransaction()
+	require.NoError(t, err)
 
 	require.NoError(t, trn.MatchCreateDeal(match.ID, protocol.Deal{}))
 	trn.Commit()

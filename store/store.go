@@ -16,7 +16,7 @@ type Store interface {
 
 	RunCommandSetter(*cobra.Command)
 
-	BeginTransaction(...TransactionScope) Transaction
+	BeginTransaction(...TransactionScope) (Transaction, error)
 
 	RegisterNotificationsChannel(chan interface{}) error
 	UnregisterNotificationsChannel(chan interface{}) error

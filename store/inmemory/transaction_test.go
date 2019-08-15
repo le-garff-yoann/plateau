@@ -18,7 +18,8 @@ func TestBeginTransactionCommit(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	id, err := trn.MatchCreate(protocol.Match{})
 	require.NoError(t, err)
@@ -33,7 +34,8 @@ func TestBeginTransactionCommit(t *testing.T) {
 
 	require.True(t, trn.Closed())
 
-	trn = s.BeginTransaction()
+	trn, err = s.BeginTransaction()
+	require.NoError(t, err)
 
 	_, err = trn.MatchRead(id)
 	require.NoError(t, err)
@@ -50,7 +52,8 @@ func TestBeginTransactionAbort(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	id, err := trn.MatchCreate(protocol.Match{})
 	require.NoError(t, err)
@@ -67,7 +70,8 @@ func TestBeginTransactionAbort(t *testing.T) {
 
 	require.Empty(t, trn.Errors())
 
-	trn = s.BeginTransaction()
+	trn, err = s.BeginTransaction()
+	require.NoError(t, err)
 
 	_, err = trn.MatchRead(id)
 	require.IsType(t, store.DontExistError(""), err)

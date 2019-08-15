@@ -21,7 +21,8 @@ func TestMatchCreateAndList(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	IDs, err := trn.MatchList()
 	require.NoError(t, err)
@@ -46,7 +47,8 @@ func TestMatchRead(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	id, err := trn.MatchCreate(protocol.Match{})
 	require.NoError(t, err)
@@ -72,7 +74,8 @@ func TestMatchEndedAt(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	id, err := trn.MatchCreate(protocol.Match{})
 	require.NoError(t, err)
@@ -102,7 +105,8 @@ func TestMatchCreateDeal(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	id, err := trn.MatchCreate(protocol.Match{})
 	require.NoError(t, err)
@@ -133,7 +137,8 @@ func TestMatchUpdateCurrentDealHolder(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	id, err := trn.MatchCreate(protocol.Match{})
 	require.NoError(t, err)
@@ -171,7 +176,8 @@ func TestMatchPlayerJoins(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	id, err := trn.MatchCreate(protocol.Match{NumberOfPlayersRequired: 2})
 	require.NoError(t, err)
@@ -200,7 +206,8 @@ func TestMatchPlayerLeaves(t *testing.T) {
 		require.NoError(t, s.Close())
 	}()
 
-	trn := s.BeginTransaction()
+	trn, err := s.BeginTransaction()
+	require.NoError(t, err)
 
 	id, err := trn.MatchCreate(protocol.Match{NumberOfPlayersRequired: 1})
 	require.NoError(t, err)

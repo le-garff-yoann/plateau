@@ -16,7 +16,12 @@ import (
 )
 
 func (s *Server) getMatchIDsHandler(w http.ResponseWriter, r *http.Request) {
-	trn := s.store.BeginTransaction()
+	trn, err := s.store.BeginTransaction()
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	IDs, err := trn.MatchList()
 	trn.Abort()
@@ -67,7 +72,12 @@ func (s *Server) createMatchHandler(w http.ResponseWriter, r *http.Request) {
 		NumberOfPlayersRequired: reqBody.NumberOfPlayersRequired,
 	}
 
-	trn := s.store.BeginTransaction()
+	trn, err := s.store.BeginTransaction()
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	if match.ID, err = trn.MatchCreate(match); err != nil {
 		trn.Abort()
@@ -83,9 +93,14 @@ func (s *Server) createMatchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) readMatchHandler(w http.ResponseWriter, r *http.Request) {
-	matchID := mux.Vars(r)["id"]
+	trn, err := s.store.BeginTransaction()
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
-	trn := s.store.BeginTransaction()
+		return
+	}
+
+	matchID := mux.Vars(r)["id"]
 
 	match, err := trn.MatchRead(matchID)
 	trn.Abort()
@@ -104,9 +119,14 @@ func (s *Server) readMatchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
-	matchID := mux.Vars(r)["id"]
+	trn, err := s.store.BeginTransaction()
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
-	trn := s.store.BeginTransaction()
+		return
+	}
+
+	matchID := mux.Vars(r)["id"]
 
 	match, err := trn.MatchRead(matchID)
 	trn.Abort()
@@ -137,11 +157,14 @@ func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var (
-		matchID = mux.Vars(r)["id"]
+	trn, err := s.store.BeginTransaction()
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
-		trn = s.store.BeginTransaction()
-	)
+		return
+	}
+
+	matchID := mux.Vars(r)["id"]
 
 	match, err := trn.MatchRead(matchID)
 	trn.Abort()
@@ -205,11 +228,14 @@ func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.
 }
 
 func (s *Server) getMatchDealsHandler(w http.ResponseWriter, r *http.Request) {
-	var (
-		trn = s.store.BeginTransaction()
+	trn, err := s.store.BeginTransaction()
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
 
-		matchID = mux.Vars(r)["id"]
-	)
+		return
+	}
+
+	matchID := mux.Vars(r)["id"]
 
 	match, err := trn.MatchRead(matchID)
 	trn.Abort()
@@ -279,7 +305,12 @@ func (s *Server) patchMatchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trn := s.store.BeginTransaction()
+	trn, err := s.store.BeginTransaction()
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	reqContainer.Player, err = trn.PlayerRead(username)
 	if err != nil {

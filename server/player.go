@@ -11,7 +11,12 @@ import (
 )
 
 func (s *Server) getPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
-	trn := s.store.BeginTransaction()
+	trn, err := s.store.BeginTransaction()
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	names, err := trn.PlayerList()
 	trn.Abort()
@@ -32,7 +37,12 @@ func (s *Server) getPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) readPlayerHandler(w http.ResponseWriter, r *http.Request) {
 	playerName := mux.Vars(r)["name"]
 
-	trn := s.store.BeginTransaction()
+	trn, err := s.store.BeginTransaction()
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	player, err := trn.PlayerRead(playerName)
 	trn.Abort()

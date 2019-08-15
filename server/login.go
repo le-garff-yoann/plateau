@@ -72,7 +72,12 @@ func (s *Server) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	player := protocol.Player{Name: cred.Username, Password: string(hPassword)}
 
-	trn := s.store.BeginTransaction()
+	trn, err := s.store.BeginTransaction()
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	if err := trn.PlayerCreate(player); err != nil {
 		trn.Abort()
@@ -106,7 +111,12 @@ func (s *Server) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trn := s.store.BeginTransaction()
+	trn, err := s.store.BeginTransaction()
+	if err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	player, err := trn.PlayerRead(cred.Username)
 	trn.Abort()

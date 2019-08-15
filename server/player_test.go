@@ -42,7 +42,8 @@ func TestGetPlayersNameHandler(t *testing.T) {
 
 	player := protocol.Player{Name: "foo"}
 
-	trn := srv.store.BeginTransaction()
+	trn, err := srv.store.BeginTransaction()
+	require.NoError(t, err)
 
 	require.NoError(t, trn.PlayerCreate(player))
 	trn.Commit()
@@ -86,7 +87,8 @@ func TestReadPlayerNameHandler(t *testing.T) {
 
 	require.Equal(t, http.StatusNotFound, newRecorder().Code)
 
-	trn := srv.store.BeginTransaction()
+	trn, err := srv.store.BeginTransaction()
+	require.NoError(t, err)
 
 	require.NoError(t, trn.PlayerCreate(player))
 	trn.Commit()
