@@ -34,7 +34,8 @@ popd
 docker build --build-arg PACKAGING=full -t my-plateau .
 
 # Start the server via Docker.
-docker run -d -p 8080:80 -e LISTEN=80 -e SESSION_KEY=my-STRONG-secret my-plateau
+docker run -d -p 8080:80 my-plateau \
+    -l :80 --listen-static-dir /public --session-key my-STRONG-secret
 ```
 
 ## [Customizing](CUSTOMIZING.md)
