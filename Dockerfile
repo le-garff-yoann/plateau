@@ -1,15 +1,28 @@
-ARG PACKAGING=simple
+FROM golang:1.12.1
 
-FROM scratch AS build_simple
+LABEL autodelete=true
+ARG GO_TAGS
 
-FROM scratch AS build_full
+COPY . $GOPATH/src/plateau/
+RUN \
+    cd $GOPATH/src/plateau && \
+    CGO_ENABLED=0 go build -tags="${GO_TAGS}" -o /tmp/plateau
 
-ONBUILD COPY vue/plateau/dist /public
+FROM node:11.3
 
-FROM build_${PACKAGING}
+LABEL autodelete=true
+
+COPY vue/plateau/ /tmp/plateau/
+RUN \
+    cd /tmp/plateau && \
+    npm install && \
+    npm run build
+
+FROM scratch
 
 LABEL Author="Yoann Le Garff (le-garff-yoann) <pe.weeble@yahoo.fr>"
 
-COPY dist/backend/plateau /
+COPY --from=0 /tmp/plateau /
+COPY --from=1 /tmp/plateau/dist /public
 
 ENTRYPOINT [ "/plateau" ]

@@ -82,7 +82,7 @@ func SetupTestMatchRuntime(t *testing.T, testMatchRuntime *TestMatchRuntime) {
 
 	testMatchRuntime.Match = *m
 
-	trn.Commit()
+	require.NoError(t, trn.Commit())
 
 	testMatchRuntime.MatchRuntime, err = testMatchRuntime.srv.guardRuntime(id)
 	require.NoError(t, err)

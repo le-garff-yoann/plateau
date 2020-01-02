@@ -74,10 +74,8 @@ func TestWithMessagesConcealed(t *testing.T) {
 	t.Parallel()
 
 	deal := Deal{Messages: []Message{Message{
-		Code: MPlayerAccepts,
-		Payload: ConcealedMessagePayload{
-			AllowedNamesCode: []string{"foo"},
-		},
+		Code:             MPlayerAccepts,
+		AllowedNamesCode: []string{"foo"},
 	}}}
 
 	concealedDeal := deal.WithMessagesConcealed("bar")

@@ -6,64 +6,74 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMessageConcealed(t *testing.T) {
-	t.Parallel()
-
-	var (
-		msg = Message{Code: MPlayerAccepts, Payload: "foo"}
-
-		playerAName = "bar"
-		playerBName = "baz"
-	)
-
-	require.Equal(t, &msg, msg.Concealed(playerAName))
-
-	concealedMsg := Message{
-		Code: msg.Code,
-		Payload: ConcealedMessagePayload{
-			AllowedNamesCode:    nil,
-			AllowedNamesPayload: nil,
-			Data:                msg.Payload.(string),
-		},
-	}
-	require.Equal(t, &msg, concealedMsg.Concealed(playerAName))
-
-	mutateConcealedMsgPayload := func(mutater func(*ConcealedMessagePayload)) {
-		p := concealedMsg.Payload.(ConcealedMessagePayload)
-
-		mutater(&p)
-
-		concealedMsg.Payload = p
-	}
-
-	require.Equal(t, msg.Code, concealedMsg.Concealed().Code)
-
-	mutateConcealedMsgPayload(func(m *ConcealedMessagePayload) {
-		m.AllowedNamesCode = []string{playerBName}
-	})
-	require.Empty(t, concealedMsg.Concealed(playerAName).Code)
-	require.Equal(t, msg.Code, concealedMsg.Concealed().Code)
-
-	mutateConcealedMsgPayload(func(m *ConcealedMessagePayload) {
-		m.AllowedNamesCode = []string{playerAName}
-	})
-	require.Equal(t, msg.Code, concealedMsg.Concealed(playerAName).Code)
-
-	mutateConcealedMsgPayload(func(m *ConcealedMessagePayload) {
-		m.AllowedNamesPayload = []string{playerBName}
-	})
-	require.Empty(t, concealedMsg.Concealed(playerAName).Payload)
-
-	mutateConcealedMsgPayload(func(m *ConcealedMessagePayload) {
-		m.AllowedNamesPayload = []string{playerAName}
-	})
-	require.Equal(t, msg.Payload, concealedMsg.Concealed(playerAName).Payload)
-}
-
 func TestMessageCodeString(t *testing.T) {
 	t.Parallel()
 
 	msgCode := MPlayerAccepts
 
 	require.Equal(t, string(msgCode), msgCode.String())
+}
+
+func TestMessagePayloadEncodingAndDecoding(t *testing.T) {
+	t.Parallel()
+
+	var (
+		payload = "foo"
+
+		msg = Message{Code: MPlayerAccepts}
+	)
+
+	require.NotPanics(t, func() { msg.EncodePayload(payload) })
+
+	var decodedPayload string
+	require.NotPanics(t, func() { msg.DecodePayload(&decodedPayload) })
+	require.Equal(t, payload, decodedPayload)
+}
+
+func TestMessageConcealed(t *testing.T) {
+	t.Parallel()
+
+	var (
+		msg = Message{Code: MPlayerAccepts}
+
+		playerAName = "bar"
+		playerBName = "baz"
+	)
+
+	newMsg := func(mutater func(*Message)) {
+		mutater(&Message{
+			Code:    msg.Code,
+			Payload: msg.Payload,
+		})
+	}
+
+	newMsg(func(m *Message) {
+		require.Equal(t, &msg, m.Concealed(playerAName))
+	})
+
+	newMsg(func(m *Message) {
+		m.AllowedNamesCode = append(m.AllowedNamesCode, playerAName)
+
+		require.Equal(t, &msg, m.Concealed(playerAName))
+		require.Empty(t, m.Concealed(playerBName).Code)
+		require.Equal(t, msg.Payload, m.Concealed(playerBName).Payload)
+
+		m.AllowedNamesCode = append(m.AllowedNamesCode, playerBName)
+
+		require.Equal(t, &msg, m.Concealed(playerAName))
+		require.Equal(t, &msg, m.Concealed(playerBName))
+	})
+
+	newMsg(func(m *Message) {
+		m.AllowedNamesPayload = append(m.AllowedNamesPayload, playerAName)
+
+		require.Equal(t, &msg, m.Concealed(playerAName))
+		require.Empty(t, m.Concealed(playerBName).Payload)
+		require.Equal(t, msg.Code, m.Concealed(playerBName).Code)
+
+		m.AllowedNamesPayload = append(m.AllowedNamesPayload, playerBName)
+
+		require.Equal(t, &msg, m.Concealed(playerAName))
+		require.Equal(t, &msg, m.Concealed(playerBName))
+	})
 }

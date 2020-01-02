@@ -19,7 +19,11 @@ func (s *Server) getPlayersNameHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	names, err := trn.PlayerList()
-	trn.Abort()
+	if err := trn.Abort(); err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	if err != nil {
 		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
@@ -45,7 +49,11 @@ func (s *Server) readPlayerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	player, err := trn.PlayerRead(playerName)
-	trn.Abort()
+	if err := trn.Abort(); err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {

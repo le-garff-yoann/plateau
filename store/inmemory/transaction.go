@@ -25,7 +25,7 @@ func (s *Transaction) close() {
 }
 
 // Commit implements the `store.Transaction` interface.
-func (s *Transaction) Commit() {
+func (s *Transaction) Commit() error {
 	if s.Closed() {
 		logrus.Panic("You cannot commit a closed transaction")
 	}
@@ -34,15 +34,19 @@ func (s *Transaction) Commit() {
 
 	s.commitCb(s)
 	s.close()
+
+	return nil
 }
 
 // Abort implements the `store.Transaction` interface.
-func (s *Transaction) Abort() {
+func (s *Transaction) Abort() error {
 	if s.Closed() {
 		logrus.Panic("You cannot abort a closed transaction")
 	}
 
 	s.close()
+
+	return nil
 }
 
 // Closed implements the `store.Transaction` interface.

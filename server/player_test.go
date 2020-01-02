@@ -46,7 +46,7 @@ func TestGetPlayersNameHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, trn.PlayerCreate(player))
-	trn.Commit()
+	require.NoError(t, trn.Commit())
 
 	rr = newRecorder()
 	require.Equal(t, http.StatusOK, rr.Code)
@@ -91,7 +91,7 @@ func TestReadPlayerNameHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, trn.PlayerCreate(player))
-	trn.Commit()
+	require.NoError(t, trn.Commit())
 
 	require.Equal(t, http.StatusOK, newRecorder().Code)
 }

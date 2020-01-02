@@ -48,7 +48,7 @@ func TestGetMatchIDsHandlerHandler(t *testing.T) {
 
 	id, err := trn.MatchCreate(protocol.Match{})
 	require.NoError(t, err)
-	trn.Commit()
+	require.NoError(t, trn.Commit())
 
 	rr = newRecorder()
 	require.Equal(t, http.StatusOK, rr.Code)
@@ -144,7 +144,7 @@ func TestMatchPlayersNameHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, trn.MatchPlayerJoins(match.ID, player.Name))
-	trn.Commit()
+	require.NoError(t, trn.Commit())
 
 	req, err := http.NewRequest("GET", "", nil)
 	require.NoError(t, err)
@@ -249,7 +249,7 @@ func TestStreamMatchNotificationsHandler(t *testing.T) {
 
 	// trn.MatchEndedAt(match.ID, time.Now())
 
-	// trn.Commit()
+	// require.NoError(t, trn.Commit())
 
 	// <-done
 
@@ -261,7 +261,7 @@ func TestStreamMatchNotificationsHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, trn.MatchEndedAt(match.ID, time.Now()))
-	trn.Commit()
+	require.NoError(t, trn.Commit())
 
 	require.Equal(t, http.StatusGone, newRecorder(false).Code)
 }
@@ -288,7 +288,7 @@ func TestMatchDealsHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, trn.MatchCreateDeal(match.ID, protocol.Deal{}))
-	trn.Commit()
+	require.NoError(t, trn.Commit())
 
 	_, loginRecorder := testRegisterAndLoginHandlers(t, srv, player.Name, player.Password)
 

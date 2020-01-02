@@ -80,18 +80,22 @@ func (s *Server) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := trn.PlayerCreate(player); err != nil {
-		trn.Abort()
+		b := body.New().Ko(trn.Abort())
 
 		if _, ok := err.(store.DuplicateError); ok {
-			response.WriteJSON(w, http.StatusConflict, body.New().Ko(fmt.Errorf(`Player "%s" already exists`, cred.Username)))
+			response.WriteJSON(w, http.StatusConflict, b.Ko(fmt.Errorf(`Player "%s" already exists`, cred.Username)))
 		} else {
-			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+			response.WriteJSON(w, http.StatusInternalServerError, b.Ko(err))
 		}
 
 		return
 	}
 
-	trn.Commit()
+	if err := trn.Commit(); err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
 }
@@ -119,7 +123,11 @@ func (s *Server) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	player, err := trn.PlayerRead(cred.Username)
-	trn.Abort()
+	if err := trn.Abort(); err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	if err != nil {
 		httpCode := http.StatusInternalServerError

@@ -24,7 +24,11 @@ func (s *Server) getMatchIDsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	IDs, err := trn.MatchList()
-	trn.Abort()
+	if err := trn.Abort(); err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	if err != nil {
 		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
@@ -80,14 +84,16 @@ func (s *Server) createMatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if match.ID, err = trn.MatchCreate(match); err != nil {
-		trn.Abort()
-
-		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err, trn.Abort()))
 
 		return
 	}
 
-	trn.Commit()
+	if err := trn.Commit(); err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	response.WriteJSON(w, http.StatusCreated, match)
 }
@@ -103,7 +109,11 @@ func (s *Server) readMatchHandler(w http.ResponseWriter, r *http.Request) {
 	matchID := mux.Vars(r)["id"]
 
 	match, err := trn.MatchRead(matchID)
-	trn.Abort()
+	if err := trn.Abort(); err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
@@ -129,7 +139,11 @@ func (s *Server) getMatchPlayersNameHandler(w http.ResponseWriter, r *http.Reque
 	matchID := mux.Vars(r)["id"]
 
 	match, err := trn.MatchRead(matchID)
-	trn.Abort()
+	if err := trn.Abort(); err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
@@ -167,7 +181,11 @@ func (s *Server) streamMatchNotificationsHandler(w http.ResponseWriter, r *http.
 	matchID := mux.Vars(r)["id"]
 
 	match, err := trn.MatchRead(matchID)
-	trn.Abort()
+	if err := trn.Abort(); err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
@@ -238,7 +256,11 @@ func (s *Server) getMatchDealsHandler(w http.ResponseWriter, r *http.Request) {
 	matchID := mux.Vars(r)["id"]
 
 	match, err := trn.MatchRead(matchID)
-	trn.Abort()
+	if err := trn.Abort(); err != nil {
+		response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+		return
+	}
 
 	if err != nil {
 		if _, ok := err.(store.DontExistError); ok {
@@ -314,7 +336,11 @@ func (s *Server) patchMatchHandler(w http.ResponseWriter, r *http.Request) {
 
 	reqContainer.Player, err = trn.PlayerRead(username)
 	if err != nil {
-		trn.Abort()
+		if err := trn.Abort(); err != nil {
+			response.WriteJSON(w, http.StatusInternalServerError, body.New().Ko(err))
+
+			return
+		}
 
 		response.WriteJSON(w, http.StatusBadRequest, body.New().Ko(err))
 

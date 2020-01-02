@@ -148,7 +148,7 @@ func (s *Transaction) MatchEndedAt(id string, val time.Time) (err error) {
 
 	m.EndedAt = &val
 
-	return nil
+	return
 }
 
 // MatchCreateDeal implements the `store.Transaction` interface.
@@ -167,7 +167,7 @@ func (s *Transaction) MatchCreateDeal(id string, deal protocol.Deal) (err error)
 
 	m.Deals = append(m.Deals, *dealFromProtocolStruct(&deal))
 
-	return nil
+	return
 }
 
 // MatchUpdateCurrentDealHolder implements the `store.Transaction` interface.
@@ -187,7 +187,7 @@ func (s *Transaction) MatchUpdateCurrentDealHolder(id, newHolderName string) (er
 
 	m.Deals[len(m.Deals)-1].Holder.Name = newHolderName
 
-	return nil
+	return
 }
 
 // MatchAddMessageToCurrentDeal implements the `store.Transaction` interface.
@@ -208,7 +208,7 @@ func (s *Transaction) MatchAddMessageToCurrentDeal(id string, message protocol.M
 	deal := &m.Deals[len(m.Deals)-1]
 	deal.Messages = append(deal.Messages, message)
 
-	return nil
+	return
 }
 
 // MatchPlayerJoins implements the `store.Transaction` interface.
@@ -236,7 +236,7 @@ func (s *Transaction) MatchPlayerJoins(id, name string) (err error) {
 
 	m.Players[name] = protocol.Player{Name: name}
 
-	return nil
+	return
 }
 
 // MatchPlayerLeaves implements the `store.Transaction` interface.
@@ -260,5 +260,5 @@ func (s *Transaction) MatchPlayerLeaves(id, name string) (err error) {
 
 	delete(m.Players, name)
 
-	return nil
+	return
 }

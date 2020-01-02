@@ -36,7 +36,7 @@ func TestGameRuntime(t *testing.T) {
 
 		match, err := trn.MatchRead(testMatchRuntime.Match.ID)
 		require.NoError(t, err)
-		trn.Abort()
+		require.NoError(t, trn.Abort())
 
 		initialHolder := protocol.IndexDeals(match.Deals, 0).Holder
 		require.NotNil(t, initialHolder)
@@ -48,7 +48,7 @@ func TestGameRuntime(t *testing.T) {
 
 		match, err = trn.MatchRead(testMatchRuntime.Match.ID)
 		require.NoError(t, err)
-		trn.Abort()
+		require.NoError(t, trn.Abort())
 
 		currentDeal := protocol.IndexDeals(match.Deals, 0).WithMessagesConcealed(match.NextPlayer(initialHolder).Name)
 		require.Empty(t, currentDeal.Messages[len(currentDeal.Messages)-1].Code)
@@ -60,7 +60,7 @@ func TestGameRuntime(t *testing.T) {
 
 		match, err = trn.MatchRead(testMatchRuntime.Match.ID)
 		require.NoError(t, err)
-		trn.Abort()
+		require.NoError(t, trn.Abort())
 
 		return match
 	}

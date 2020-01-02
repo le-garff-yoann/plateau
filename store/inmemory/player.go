@@ -39,7 +39,7 @@ func (s *Transaction) PlayerCreate(p protocol.Player) (err error) {
 
 	s.inMemoryCopy.Players = append(s.inMemoryCopy.Players, &p)
 
-	return nil
+	return
 }
 
 // PlayerRead implements the `store.Transaction` interface.
@@ -74,9 +74,9 @@ func (s *Transaction) PlayerIncreaseWins(name string, increase uint) (err error)
 		return store.DontExistError(fmt.Sprintf(`The player %s doesn't exist`, name))
 	}
 
-	p.Wins = p.Wins + increase
+	p.Wins += increase
 
-	return nil
+	return
 }
 
 // PlayerIncreaseLoses implements the `store.Transaction` interface.
@@ -92,9 +92,9 @@ func (s *Transaction) PlayerIncreaseLoses(name string, increase uint) (err error
 		return store.DontExistError(fmt.Sprintf(`The player %s doesn't exist`, name))
 	}
 
-	p.Loses = p.Loses + increase
+	p.Loses += increase
 
-	return nil
+	return
 }
 
 // PlayerIncreaseTies implements the `store.Transaction` interface.
@@ -110,7 +110,7 @@ func (s *Transaction) PlayerIncreaseTies(name string, increase uint) (err error)
 		return store.DontExistError(fmt.Sprintf(`The player %s doesn't exist`, name))
 	}
 
-	p.Ties = p.Ties + increase
+	p.Ties += increase
 
-	return nil
+	return
 }

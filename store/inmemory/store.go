@@ -42,7 +42,7 @@ func (s *Store) Close() error {
 func (s *Store) RunCommandSetter(runCmd *cobra.Command) {}
 
 // BeginTransaction implements the `store.Store` interface.
-func (s *Store) BeginTransaction(scopes ...store.TransactionScope) (store.Transaction, error) {
+func (s *Store) BeginTransaction() (store.Transaction, error) {
 	s.inMemoryMux.Lock()
 
 	return &Transaction{

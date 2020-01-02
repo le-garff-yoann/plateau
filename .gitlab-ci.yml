@@ -1,23 +1,28 @@
 ---
 stages:
   - unit tests
-  - build
   - docker build
   - integration tests
   - docker release
 
-image: golang:1.11.5
+image: golang:1.12.1
 
 variables:
   _GOTAGS: "run_rockpaperscissors run_inmemory"
 
 go:unit tests:
   stage: unit tests
+  services:
+    - postgres:12
+  variables:
+    POSTGRES_USER: pg
+    POSTGRES_PASSWORD: pg
   before_script:
     - cd $GOPATH/src
     - ln -s $CI_PROJECT_DIR $CI_PROJECT_NAME
     - cd $CI_PROJECT_NAME
   script:
+    - export TEST_PG_DSN=postgresql://pg:pg@postgres/pg?sslmode=disable
     - go test ./... -tags="${_GOTAGS}" -coverpkg=./... -coverprofile=cover.out
     - go tool cover -func=cover.out
 
@@ -66,37 +71,7 @@ bash:unit tests:
       assert
       bash helpers_test.bash
 
-go:build:
-  stage: build
-  before_script:
-    - cd $GOPATH/src
-    - ln -s $CI_PROJECT_DIR $CI_PROJECT_NAME
-    - cd $CI_PROJECT_NAME
-  script:
-    - CGO_ENABLED=0 GOOS=linux go build -tags="${_GOTAGS}" -o dist/backend/$CI_PROJECT_NAME
-    - CGO_ENABLED=0 GOOS=windows go build -tags="${_GOTAGS}" -o dist/backend/$CI_PROJECT_NAME.exe
-  artifacts:
-    paths:
-      - dist/
-  dependencies:
-    - go:unit tests
-
-node:build:
-  stage: build
-  image: node:11.3
-  before_script:
-    - cd vue/plateau/
-  script:
-    - npm install
-    - npm run build
-  artifacts:
-    paths:
-      - vue/plateau/dist/
-  dependencies:
-    - node:unit tests
-    - node:lint
-
-docker:build:full:
+docker:build:
   stage: docker build
   services:
     - docker:dind
@@ -104,14 +79,12 @@ docker:build:full:
   before_script:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
   script:
-    - docker build --build-arg PACKAGING=full -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
+    - docker build --build-arg GO_TAGS="${_GOTAGS}" -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
     - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
   dependencies:
     - bash:unit tests
-    - node:build
-    - go:build
 
-docker:release:full:
+docker:release:
   stage: docker release
   services:
     - docker:dind
@@ -119,14 +92,12 @@ docker:release:full:
   before_script:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
   script:
-    - docker build --build-arg PACKAGING=full -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
+    - docker build --build-arg GO_TAGS="${_GOTAGS}" -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
     - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
     - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
     - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" "${CI_REGISTRY_IMAGE}:latest"
     - docker push "${CI_REGISTRY_IMAGE}:latest"
   dependencies:
     - bash:unit tests
-    - node:build
-    - go:build
   only:
     - tags
