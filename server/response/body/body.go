@@ -21,7 +21,9 @@ func (s *Body) Ok(ok ...string) *Body {
 // Ko adds one or more `error` as error messages.
 func (s *Body) Ko(ko ...error) *Body {
 	for _, e := range ko {
-		s.Failures = append(s.Failures, e.Error())
+		if e != nil {
+			s.Failures = append(s.Failures, e.Error())
+		}
 	}
 
 	return s

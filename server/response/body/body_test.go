@@ -25,5 +25,5 @@ func TestResponse(t *testing.T) {
 	require.Empty(t, body.Ko().Failures)
 	require.Len(t, body.Ko(ko).Failures, 1)
 	require.Len(t, body.Ko(ko).Failures, 2)
-	require.Len(t, body.Ko(ko, ko).Failures, 4)
+	require.Len(t, body.Ko(ko, ko, nil).Failures, 4)
 }
