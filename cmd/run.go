@@ -30,7 +30,7 @@ var (
 			sessionStore.MaxAge(sessionMaxAge)
 
 			srv, err := server.Init(
-				serverListener, serverListenerStaticDir,
+				serverListener,
 				gm,
 				str,
 				sessionStore,
@@ -71,9 +71,6 @@ func init() {
 	runCmd.
 		Flags().
 		StringVarP(&serverListener, "listen", "l", ":8080", "Listen on x:x (e.g. :8080 or 127.0.0.1:8080)")
-	runCmd.
-		Flags().
-		StringVar(&serverListenerStaticDir, "listen-static-dir", serverListenerStaticDir, "Exposes the contents of this directory at /")
 
 	runCmd.
 		Flags().

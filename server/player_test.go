@@ -15,7 +15,7 @@ import (
 func TestGetPlayersNameHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	require.NoError(t, srv.store.Open())
@@ -56,7 +56,7 @@ func TestGetPlayersNameHandler(t *testing.T) {
 func TestReadPlayerNameHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	require.NoError(t, srv.store.Open())

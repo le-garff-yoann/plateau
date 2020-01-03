@@ -13,7 +13,7 @@ import (
 func TestGetGameDefinitionHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	require.NoError(t, srv.store.Open())

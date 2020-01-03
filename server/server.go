@@ -44,7 +44,7 @@ func New(gm Game, str store.Store) (*Server, error) {
 }
 
 // Init returns a new `Server` with in addition the *gorilla/mux* router and the *sessionStore* initialized.
-func Init(listener, listenerStaticDir string, gm Game, str store.Store, sessionStore ...sessions.Store) (*Server, error) {
+func Init(listener string, gm Game, str store.Store, sessionStore ...sessions.Store) (*Server, error) {
 	s, err := New(gm, str)
 	if err != nil {
 		return nil, err
@@ -127,14 +127,6 @@ func Init(listener, listenerStaticDir string, gm Game, str store.Store, sessionS
 		Methods("DELETE").
 		HandlerFunc(s.logoutUserHandler).
 		Name("logoutUser")
-
-	if listenerStaticDir != "" {
-		s.router.
-			PathPrefix("/").
-			Methods("GET").
-			Handler(http.FileServer(http.Dir(listenerStaticDir))).
-			Name("root")
-	}
 
 	return s, nil
 }

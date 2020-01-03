@@ -7,7 +7,7 @@ import (
 
 // Match is the representation of a match,
 // with its beginning, its end, its `Player` and
-// its interactions a.k.a `Deal`.
+// its interactions aka `Deal`.
 type Match struct {
 	ID string `json:"id"`
 

@@ -1,9 +1,6 @@
----
 stages:
   - unit tests
-  - docker build
   - integration tests
-  - docker release
 
 image: golang:1.12.1
 
@@ -28,18 +25,18 @@ go:unit tests:
 
 node:unit tests:
   stage: unit tests
-  image: node:11.3
+  image: node:13.5
   before_script:
-    - cd vue/plateau/
+    - cd vue/plateau
   script:
     - npm install
     - npm run test:unit
 
 node:lint:
   stage: unit tests
-  image: node:11.3
+  image: node:13.5
   before_script:
-    - cd vue/plateau/
+    - cd vue/plateau
   script:
     - npm install
     - npm run lint
@@ -51,8 +48,6 @@ bash:unit tests:
   image: docker
   variables:
     BASH_ASSERT_IMAGE: $CI_REGISTRY/le-garff-yoann/docker-bash-assert
-  before_script:
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
   script:
     - docker pull $BASH_ASSERT_IMAGE
     - >
@@ -70,34 +65,3 @@ bash:unit tests:
       -w /tmp
       assert
       bash helpers_test.bash
-
-docker:build:
-  stage: docker build
-  services:
-    - docker:dind
-  image: docker:git
-  before_script:
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
-  script:
-    - docker build --build-arg GO_TAGS="${_GOTAGS}" -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
-    - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
-  dependencies:
-    - bash:unit tests
-
-docker:release:
-  stage: docker release
-  services:
-    - docker:dind
-  image: docker:git
-  before_script:
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
-  script:
-    - docker build --build-arg GO_TAGS="${_GOTAGS}" -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" .
-    - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
-    - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
-    - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" "${CI_REGISTRY_IMAGE}:latest"
-    - docker push "${CI_REGISTRY_IMAGE}:latest"
-  dependencies:
-    - bash:unit tests
-  only:
-    - tags

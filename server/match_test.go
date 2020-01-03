@@ -18,7 +18,7 @@ import (
 func TestGetMatchIDsHandlerHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	require.NoError(t, srv.store.Open())
@@ -109,7 +109,7 @@ func testCreateAndReadMatchHandler(t *testing.T, srv *Server) *protocol.Match {
 func TestCreateAndReadMatchHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	require.NoError(t, srv.store.Open())
@@ -123,7 +123,7 @@ func TestCreateAndReadMatchHandler(t *testing.T) {
 func TestMatchPlayersNameHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	require.NoError(t, srv.store.Open())
@@ -164,7 +164,7 @@ func TestMatchPlayersNameHandler(t *testing.T) {
 func TestStreamMatchNotificationsHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	require.NoError(t, srv.store.Open())
@@ -269,7 +269,7 @@ func TestStreamMatchNotificationsHandler(t *testing.T) {
 func TestMatchDealsHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	require.NoError(t, srv.store.Open())
@@ -313,7 +313,7 @@ func TestMatchDealsHandler(t *testing.T) {
 func TestPatchMatchHandler(t *testing.T) {
 	t.Parallel()
 
-	srv, err := Init("", "", &surrenderGame{}, &inmemory.Store{})
+	srv, err := Init("", &surrenderGame{}, &inmemory.Store{})
 	require.NoError(t, err)
 
 	require.NoError(t, srv.store.Open())

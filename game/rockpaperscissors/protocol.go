@@ -14,6 +14,6 @@ const (
 	MRock protocol.MessageCode = "ROCK"
 	// MPaper represents a "paper" played.
 	MPaper protocol.MessageCode = "PAPER"
-	// MScissors represents a "paper" played.
+	// MScissors represents a "scissor" played.
 	MScissors protocol.MessageCode = "SCISSORS"
 )
