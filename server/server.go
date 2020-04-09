@@ -81,14 +81,17 @@ func Init(listener string, gm Game, str store.Store, sessionStore ...sessions.St
 		Name("getPlayersName")
 	ar.
 		PathPrefix("/matchs/{id}/players").
+		Methods("GET").
 		HandlerFunc(s.getMatchPlayersNameHandler).
 		Name("getMatchPlayersName")
 	ar.
 		PathPrefix("/matchs/{id}/notifications").
+		Methods("GET").
 		HandlerFunc(s.streamMatchNotificationsHandler).
 		Name("streamMatchNotifications")
 	ar.
 		PathPrefix("/matchs/{id}/deals").
+		Methods("GET").
 		HandlerFunc(s.getMatchDealsHandler).
 		Name("getMatchDeals")
 	ar.
