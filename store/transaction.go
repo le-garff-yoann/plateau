@@ -1,17 +1,18 @@
 package store
 
 import (
-	"plateau/protocol"
 	"time"
+
+	"github.com/le-garff-yoann/plateau/protocol"
 )
 
 // Transaction represents a specialized transaction which exposes requests specific to this project.
 //
 // It has `Commit()` and `Abort()` which allows
 // an [ACID](https://en.wikipedia.org/wiki/ACID)-compliant implementation.
-//	- Depending on the implementation, there is no guarantee that you will be able to
-//	continue requesting in the same transaction after an error has been returned by a request.
-//	This principle must be taken into account with the **systematic** use of `Abort()` after one of these errors.
+//   - Depending on the implementation, there is no guarantee that you will be able to
+//     continue requesting in the same transaction after an error has been returned by a request.
+//     This principle must be taken into account with the **systematic** use of `Abort()` after one of these errors.
 type Transaction interface {
 	Commit() error
 	Abort() error

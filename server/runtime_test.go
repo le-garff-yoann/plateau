@@ -1,8 +1,9 @@
 package server
 
 import (
-	"plateau/protocol"
 	"testing"
+
+	"github.com/le-garff-yoann/plateau/protocol"
 )
 
 func TestGameRuntime(t *testing.T) {

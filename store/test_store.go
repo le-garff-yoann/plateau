@@ -2,18 +2,18 @@ package store
 
 import (
 	"fmt"
-	"plateau/protocol"
 	"testing"
 	"time"
 
+	"github.com/le-garff-yoann/plateau/protocol"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
 )
 
 // TestStore is accompanied by a list of methods that act
 // as an agnostic test suite for the implementation of `Store`.
-//	- *SetupCb* is optionnal and is called after every `WrapTest()` call.
-//	- *TeardownCb* is optionnal and is called before every `WrapTest()` call.
+//   - *SetupCb* is optionnal and is called after every `WrapTest()` call.
+//   - *TeardownCb* is optionnal and is called before every `WrapTest()` call.
 type TestStore struct {
 	T *testing.T
 

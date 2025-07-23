@@ -2,9 +2,9 @@ package inmemory
 
 import (
 	"fmt"
-	"plateau/protocol"
-	"plateau/store"
 
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/store"
 	"github.com/ulule/deepcopier"
 )
 

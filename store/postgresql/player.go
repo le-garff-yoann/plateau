@@ -2,10 +2,10 @@ package postgresql
 
 import (
 	"fmt"
-	"plateau/protocol"
-	"plateau/store"
 
 	"github.com/go-pg/pg"
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/store"
 )
 
 // Player ...

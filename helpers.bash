@@ -1,5 +1,7 @@
-new_plateau() {
-    if [[ -z $1  ]]
+new_plateau() (
+	set -e
+
+    if [[ -z $1 ]]
     then
         echo "Usage: $0 <game name>"
 
@@ -8,26 +10,27 @@ new_plateau() {
 
     if [[ -d ~/$1 ]]
     then
+		# shellcheck disable=SC2088
         echo "~/$1/ already exists"
 
         return 1
     fi
 
-    echo "Creates project $1..."
+    echo "Creating project $1..."
 
-    echo "Copy $PWD to ~/$1/"
-    cp -r $PWD ~/$1
+    echo "Copying $PWD to ~/$1/"
+    cp -r "$PWD" "$HOME/$1"
 
-    pushd ~/$1 || return 1
+    cd "$HOME/$1"
 
-    cat > cmd/run_$1.go <<EOF
+    cat > "cmd/run_$1.go" <<EOF
 // +build run_$1
 
 package cmd
 
 import (
-	"plateau/game/$1"
-	"plateau/server"
+	"github.com/le-garff-yoann/plateau/game/$1"
+	"github.com/le-garff-yoann/plateau/server"
 )
 
 func newGame() server.Game {
@@ -35,16 +38,17 @@ func newGame() server.Game {
 }
 EOF
 
-    echo "Creates game/$1/"
-    mkdir game/$1
+    echo "Creating game/$1/"
+    mkdir "game/$1"
 
-    echo "Writes game/$1/$1.go"
-    cat > game/$1/$1.go <<EOF
+    echo "Generating game/$1/$1.go"
+    cat > "game/$1/$1.go" <<EOF
 package $1
 
 import (
 	"fmt"
-	"plateau/protocol"
+
+	"github.com/le-garff-yoann/plateau/protocol"
 )
 
 // Game ...
@@ -91,14 +95,14 @@ func (s *Game) MaxPlayers() uint {
 }
 EOF
 
-    echo "Writes game/$1/$1_test.go"
-    cat > game/$1/$1_test.go <<EOF
+    echo "Generating game/$1/$1_test.go"
+    cat > "game/$1/$1_test.go" <<EOF
 package $1
 
 import (
-	"plateau/protocol"
 	"testing"
 
+	"github.com/le-garff-yoann/plateau/plateau/protocol"
 	"github.com/stretchr/testify/require"
 )
 
@@ -117,14 +121,14 @@ func TestGame(t *testing.T) {
 }
 EOF
 
-    echo "Writes game/$1/context.go"
-    cat > game/$1/context.go <<EOF
+    echo "Generating game/$1/context.go"
+    cat > "game/$1/context.go" <<EOF
 package $1
 
 import (
-	"plateau/protocol"
-	"plateau/server"
-	"plateau/store"
+	"github.com/le-garff-yoann/plateau/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/plateau/server"
+	"github.com/le-garff-yoann/plateau/plateau/store"
 )
 
 // Context ...
@@ -133,15 +137,15 @@ func (s *Game) Context(trn store.Transaction, reqContainer *protocol.RequestCont
 }
 EOF
 
-    echo "Writes game/$1/context_test.go"
-    cat > game/$1/context_test.go <<EOF
+    echo "Generating game/$1/context_test.go"
+    cat > "game/$1/context_test.go" <<EOF
 package $1
 
 import (
-	"plateau/protocol"
-	"plateau/server"
 	"testing"
 
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/server"
 	"github.com/stretchr/testify/require"
 )
 
@@ -168,63 +172,56 @@ func TestGameRuntime(t *testing.T) {
 }
 EOF
 
-    echo "Cleans project $1..."
-    rm -Rf \
-        .git/ \
-        .gitlab-ci.yml \
-        {.,vue/plateau}/*.md
-        vendor/ \
-        cmd/run_rockpaperscissors.go \
-        game/rockpaperscissors
+    echo "Cleaning up project $1..."
+    rm -Rf .git/ .gitlab-ci.yml {.,vue/plateau}/*.md \
+        vendor/ cmd/run_rockpaperscissors.go game/rockpaperscissors
 
-    cat > game/$1/context_test.go <<EOF
+    cat > "game/$1/context_test.go" <<EOF
 EOF
 
-    echo 'Writes of README.md'
+    echo "Generating README.md"
     cat > README.md <<EOF
 # Plateau - $1
 
 ## Build
 
-```bash
+\`\`\`bash
 go build -tags="run_$1 run_inmemory" -o dist/plateau
-```
+\`\`\`
 EOF
-    echo "Writes of $1/vue/plateau/README.md"
+    echo "Generating $1/vue/plateau/README.md"
     cat > vue/plateau/README.md <<EOF
 # Plateau - $1
 
 ## Build
 
-```bash
+\`\`\`bash
 npm run build
-```
+\`\`\`
 
-## Other `run` subcommands
+## Other \`run\` subcommands
 
 - Unit test
 
-```bash
+\`\`\`bash
 npm run test:unit
-```
+\`\`\`
 
 - Lint
 
-```bash
+\`\`\`bash
 npm run lint
-```
+\`\`\`
 
 - Server aka "development mode"
 
-1. Run `plateau run` with the `-l :3000` parameter.
+1. Run \`plateau run\` with the \`-l :3000\` parameter.
 2. 
-```bash
+\`\`\`bash
 NODE_DEV_PROXY_API=http://localhost:3000 \
     npm run serve
-```
+\`\`\`
 EOF
 
-    popd
-
-    echo "Done"
-}
+    echo Done.
+)

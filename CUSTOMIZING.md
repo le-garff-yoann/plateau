@@ -5,7 +5,7 @@
 ```bash
 . helpers.bash
 
-new_plateau mygame # Create ~/mygame/
+new_plateau mygame # Creates ~/mygame/
 ```
 
 ## It's now yours to modify!
@@ -25,4 +25,4 @@ It must implement the [`plateau/server.Game`](server/game.go) interface.
 
 This frontend is "game-agnostic" but you can customize the [`Match`](vue/plateau/src/components/Core/Match.vue) component to better fit your game.
 
-**N.B**: *Plateau* exposes a [REST API](server/server.go) so you can easily build another frontend from scratch.
+**N.B**: _Plateau_ exposes a [REST API](server/server.go) so you can easily build another frontend from scratch.

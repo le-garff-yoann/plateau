@@ -2,9 +2,10 @@ package server
 
 import (
 	"errors"
-	"plateau/protocol"
-	"plateau/server/response/body"
-	"plateau/store"
+
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/server/response/body"
+	"github.com/le-garff-yoann/plateau/store"
 )
 
 func (s *Server) guardRuntime(matchID string) (*matchRuntime, error) {

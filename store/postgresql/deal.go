@@ -1,6 +1,6 @@
 package postgresql
 
-import "plateau/protocol"
+import "github.com/le-garff-yoann/plateau/protocol"
 
 // Deal ...
 type Deal struct {

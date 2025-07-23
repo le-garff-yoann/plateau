@@ -1,17 +1,18 @@
-FROM golang:1.12.1
+FROM golang:1.23.1 AS build
 
 LABEL autodelete=true
 ARG GO_TAGS
 
 COPY . $GOPATH/src/plateau/
-RUN \
-    cd $GOPATH/src/plateau && \
-    CGO_ENABLED=0 go build -tags="${GO_TAGS}" -o /tmp/plateau
 
-FROM scratch
+WORKDIR $GOPATH/src/plateau
 
-LABEL Author="Yoann Le Garff (le-garff-yoann) <pe.weeble@yahoo.fr>"
+RUN CGO_ENABLED=0 go build -tags="${GO_TAGS}" -o /tmp/plateau
 
-COPY --from=0 /tmp/plateau /
+FROM scratch AS base
+
+LABEL org.opencontainers.image.authors="Yoann Le Garff (le-garff-yoann) <pe.weeble@yahoo.fr>"
+
+COPY --from=build /tmp/plateau /
 
 ENTRYPOINT [ "/plateau" ]

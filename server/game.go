@@ -2,17 +2,18 @@ package server
 
 import (
 	"net/http"
-	"plateau/protocol"
-	"plateau/server/response"
-	"plateau/store"
+
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/server/response"
+	"github.com/le-garff-yoann/plateau/store"
 )
 
 // Game represents the definition of a game.
-//	- `IsMatchValid()` is called when creating the game through the API.
-//	- `Init()` initializes the implementation of this interface.
-//	This can be useful if it have values that need to be defined.
-//	- `Context()` is called on every `protocol.RequestContainer` received if the
-//	match is started and not finished.
+//   - `IsMatchValid()` is called when creating the game through the API.
+//   - `Init()` initializes the implementation of this interface.
+//     This can be useful if it have values that need to be defined.
+//   - `Context()` is called on every `protocol.RequestContainer` received if the
+//     match is started and not finished.
 type Game interface {
 	IsMatchValid(*protocol.Match) error
 

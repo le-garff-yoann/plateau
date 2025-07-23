@@ -1,8 +1,6 @@
 package postgresql
 
-import (
-	"plateau/protocol"
-)
+import "github.com/le-garff-yoann/plateau/protocol"
 
 // Message ...
 type Message struct {

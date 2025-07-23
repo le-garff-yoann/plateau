@@ -1,10 +1,10 @@
 package rockpaperscissors
 
 import (
-	"plateau/protocol"
-	"plateau/server"
 	"testing"
 
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/server"
 	"github.com/stretchr/testify/require"
 )
 

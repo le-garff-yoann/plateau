@@ -1,11 +1,11 @@
 package server
 
 import (
-	"plateau/protocol"
-	"plateau/store"
-	"plateau/store/inmemory"
 	"testing"
 
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/store"
+	"github.com/le-garff-yoann/plateau/store/inmemory"
 	"github.com/stretchr/testify/require"
 )
 

@@ -1,66 +1,66 @@
+---
 stages:
   - unit tests
   - integration tests
 
-image: golang:1.12.1
+image: golang:1.23.1
 
 variables:
   _GOTAGS: "run_rockpaperscissors run_inmemory"
 
-go:unit tests:
+go test:
   stage: unit tests
   services:
-    - postgres:12
+    - postgres:14
   variables:
     POSTGRES_USER: pg
     POSTGRES_PASSWORD: pg
-  before_script:
-    - cd $GOPATH/src
-    - ln -s $CI_PROJECT_DIR $CI_PROJECT_NAME
-    - cd $CI_PROJECT_NAME
   script:
-    - export TEST_PG_DSN=postgresql://pg:pg@postgres/pg?sslmode=disable
+    - cd "$GOPATH/src"
+    - ln -s "$CI_PROJECT_DIR" "$CI_PROJECT_NAME"
+    - cd "$CI_PROJECT_NAME"
+    - TEST_PG_DSN=postgresql://pg:pg@postgres/pg?sslmode=disable
+    - export TEST_PG_DSN
     - go test ./... -tags="${_GOTAGS}" -coverpkg=./... -coverprofile=cover.out
     - go tool cover -func=cover.out
 
-node:unit tests:
-  stage: unit tests
-  image: node:13.5
+.node:
+  image: node:13.13
   before_script:
     - cd vue/plateau
-  script:
     - npm install
+
+npm run test:unit:
+  extends: .node
+  stage: unit tests
+  script:
     - npm run test:unit
 
-node:lint:
+npm run lint:
+  extends: .node
   stage: unit tests
-  image: node:13.5
-  before_script:
-    - cd vue/plateau
-  script:
-    - npm install
     - npm run lint
 
-bash:unit tests:
+bash helpers_test.bash:
   stage: unit tests
+  image: docker
   services:
     - docker:dind
-  image: docker
   variables:
     BASH_ASSERT_IMAGE: $CI_REGISTRY/le-garff-yoann/docker-bash-assert
   script:
-    - docker pull $BASH_ASSERT_IMAGE
-    - >
+    - docker pull "$BASH_ASSERT_IMAGE"
+    - >-
       docker run -d --name assert
       --entrypoint sleep
-      $BASH_ASSERT_IMAGE
+      "$BASH_ASSERT_IMAGE"
       300
-    - |
+    - |-
       for f in *.bash
       do
-        docker cp $f assert:/tmp
+        docker cp "$f" assert:/tmp
       done
-    - >
+    - >-
       docker exec
       -w /tmp
       assert

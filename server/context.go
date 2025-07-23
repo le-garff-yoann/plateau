@@ -1,8 +1,6 @@
 package server
 
-import (
-	"plateau/protocol"
-)
+import "github.com/le-garff-yoann/plateau/protocol"
 
 // NewContext returns a new `Context`.
 func NewContext() *Context {

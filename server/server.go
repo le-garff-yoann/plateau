@@ -2,11 +2,12 @@ package server
 
 import (
 	"net/http"
-	"plateau/store"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/le-garff-yoann/plateau/store"
 )
 
 // ServerName is the server name.
@@ -51,7 +52,7 @@ func Init(listener string, gm Game, str store.Store, sessionStore ...sessions.St
 	}
 
 	if len(sessionStore) == 0 {
-		sessionStore = append(sessionStore, sessions.NewCookieStore([]byte("")))
+		sessionStore = append(sessionStore, sessions.NewCookieStore([]byte(uuid.NewString())))
 	}
 	s.sessionStore = sessionStore[0]
 

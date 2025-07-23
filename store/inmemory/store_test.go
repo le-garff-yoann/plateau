@@ -1,9 +1,9 @@
 package inmemory
 
 import (
-	"plateau/store"
 	"testing"
 
+	"github.com/le-garff-yoann/plateau/store"
 	"github.com/stretchr/testify/require"
 )
 

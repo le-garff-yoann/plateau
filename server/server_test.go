@@ -1,9 +1,9 @@
 package server
 
 import (
-	"plateau/store/inmemory"
 	"testing"
 
+	"github.com/le-garff-yoann/plateau/store/inmemory"
 	"github.com/stretchr/testify/require"
 )
 

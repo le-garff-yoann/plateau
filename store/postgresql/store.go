@@ -3,14 +3,13 @@ package postgresql
 import (
 	"encoding/json"
 	"fmt"
-	"plateau/broadcaster"
-	"plateau/server"
-	"plateau/store"
-
-	"github.com/sirupsen/logrus"
 
 	"github.com/go-pg/pg"
 	"github.com/go-pg/pg/orm"
+	"github.com/le-garff-yoann/plateau/broadcaster"
+	"github.com/le-garff-yoann/plateau/server"
+	"github.com/le-garff-yoann/plateau/store"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 

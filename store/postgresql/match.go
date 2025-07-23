@@ -2,12 +2,12 @@ package postgresql
 
 import (
 	"fmt"
-	"plateau/protocol"
-	"plateau/store"
 	"time"
 
 	"github.com/go-pg/pg"
 	"github.com/go-pg/pg/orm"
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/store"
 	uuid "github.com/satori/go.uuid"
 )
 

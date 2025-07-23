@@ -1,8 +1,6 @@
 package rockpaperscissors
 
-import (
-	"plateau/protocol"
-)
+import "github.com/le-garff-yoann/plateau/protocol"
 
 // Game implements the `server.Game` interface.
 type Game struct {

@@ -1,8 +1,8 @@
 package server
 
 import (
-	"plateau/protocol"
-	"plateau/store"
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/store"
 )
 
 type surrenderGame struct {

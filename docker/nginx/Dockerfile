@@ -1,16 +1,17 @@
-FROM node:13.5
+FROM node:13.13 AS build
 
 LABEL autodelete=true
 
 COPY vue/plateau/ /tmp/plateau/
-RUN \
-    cd /tmp/plateau && \
-    npm install && \
+
+WORKDIR /tmp/plateau
+
+RUN npm install && \
     npm run build
 
-FROM nginx:1.17
+FROM nginx:1.29 AS base
 
-LABEL Author="Yoann Le Garff (le-garff-yoann) <pe.weeble@yahoo.fr>"
+LABEL org.opencontainers.image.authors="Yoann Le Garff (le-garff-yoann) <pe.weeble@yahoo.fr>"
 
 COPY docker/nginx/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=0 /tmp/plateau/dist /usr/share/nginx/html
+COPY --from=build /tmp/plateau/dist /usr/share/nginx/html

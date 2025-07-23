@@ -1,7 +1,7 @@
 package inmemory
 
 import (
-	"plateau/protocol"
+	"github.com/le-garff-yoann/plateau/protocol"
 )
 
 type deal struct {

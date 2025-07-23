@@ -5,9 +5,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"plateau/server/response/body"
 	"testing"
 
+	"github.com/le-garff-yoann/plateau/server/response/body"
 	"github.com/stretchr/testify/require"
 )
 

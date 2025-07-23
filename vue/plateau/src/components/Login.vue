@@ -2,7 +2,7 @@
   <b-container>
     <b-row align-h="center">
       <b-col md="5" class="pt-4">
-        <b-img src="@/assets/logo.png"></b-img>
+        <b-img src="@/assets/logo.png" width="300"></b-img>
       </b-col>
     </b-row>
 

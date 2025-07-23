@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"plateau/store/inmemory"
 	"strings"
 	"testing"
 
+	"github.com/le-garff-yoann/plateau/store/inmemory"
 	"github.com/stretchr/testify/require"
 )
 

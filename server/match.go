@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"plateau/protocol"
-	"plateau/server/response"
-	"plateau/server/response/body"
-	"plateau/store"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/server/response"
+	"github.com/le-garff-yoann/plateau/server/response/body"
+	"github.com/le-garff-yoann/plateau/store"
 	"github.com/sirupsen/logrus"
 )
 

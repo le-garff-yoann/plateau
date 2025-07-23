@@ -1,11 +1,12 @@
 package rockpaperscissors
 
 import (
-	"plateau/protocol"
-	"plateau/server"
-	"plateau/server/response/body"
-	"plateau/store"
 	"time"
+
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/server"
+	"github.com/le-garff-yoann/plateau/server/response/body"
+	"github.com/le-garff-yoann/plateau/store"
 )
 
 // Context implements the `server.Game` interface.

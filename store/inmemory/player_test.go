@@ -1,8 +1,6 @@
 package inmemory
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestPlayerList(t *testing.T) {
 	testStr(t).TestPlayerList()

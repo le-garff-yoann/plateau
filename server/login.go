@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"plateau/protocol"
-	"plateau/server/response"
-	"plateau/server/response/body"
-	"plateau/store"
 
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/server/response"
+	"github.com/le-garff-yoann/plateau/server/response/body"
+	"github.com/le-garff-yoann/plateau/store"
 	"golang.org/x/crypto/bcrypt"
 )
 

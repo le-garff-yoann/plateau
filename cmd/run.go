@@ -3,10 +3,10 @@ package cmd
 import (
 	"os"
 	"os/signal"
-	"plateau/server"
 	"syscall"
 
 	"github.com/gorilla/sessions"
+	"github.com/le-garff-yoann/plateau/server"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	// TODO: Add a little bit of "viper".

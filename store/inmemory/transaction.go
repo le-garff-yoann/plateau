@@ -1,8 +1,7 @@
 package inmemory
 
 import (
-	"plateau/store"
-
+	"github.com/le-garff-yoann/plateau/store"
 	"github.com/sirupsen/logrus"
 )
 

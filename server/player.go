@@ -3,11 +3,11 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"plateau/server/response"
-	"plateau/server/response/body"
-	"plateau/store"
 
 	"github.com/gorilla/mux"
+	"github.com/le-garff-yoann/plateau/server/response"
+	"github.com/le-garff-yoann/plateau/server/response/body"
+	"github.com/le-garff-yoann/plateau/store"
 )
 
 func (s *Server) getPlayersNameHandler(w http.ResponseWriter, r *http.Request) {

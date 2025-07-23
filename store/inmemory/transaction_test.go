@@ -1,8 +1,6 @@
 package inmemory
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestBeginTransactionCommit(t *testing.T) {
 	testStr(t).TestBeginTransactionCommit()

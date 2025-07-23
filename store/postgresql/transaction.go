@@ -1,9 +1,8 @@
 package postgresql
 
 import (
-	"plateau/store"
-
 	"github.com/go-pg/pg"
+	"github.com/le-garff-yoann/plateau/store"
 	"github.com/sirupsen/logrus"
 )
 

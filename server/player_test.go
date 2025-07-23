@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"plateau/protocol"
-	"plateau/store/inmemory"
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/le-garff-yoann/plateau/protocol"
+	"github.com/le-garff-yoann/plateau/store/inmemory"
 	"github.com/stretchr/testify/require"
 )
 

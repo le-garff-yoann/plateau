@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"plateau/pflag"
-	"plateau/server"
-	"plateau/store"
 
+	"github.com/le-garff-yoann/plateau/pflag"
+	"github.com/le-garff-yoann/plateau/server"
+	"github.com/le-garff-yoann/plateau/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

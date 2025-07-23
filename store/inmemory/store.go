@@ -1,10 +1,10 @@
 package inmemory
 
 import (
-	"plateau/broadcaster"
-	"plateau/store"
 	"sync"
 
+	"github.com/le-garff-yoann/plateau/broadcaster"
+	"github.com/le-garff-yoann/plateau/store"
 	"github.com/spf13/cobra"
 )
 

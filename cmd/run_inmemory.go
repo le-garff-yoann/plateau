@@ -1,10 +1,11 @@
+//go:build run_inmemory
 // +build run_inmemory
 
 package cmd
 
 import (
-	"plateau/store"
-	"plateau/store/inmemory"
+	"github.com/le-garff-yoann/plateau/store"
+	"github.com/le-garff-yoann/plateau/store/inmemory"
 )
 
 func newStore() store.Store {

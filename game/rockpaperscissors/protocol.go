@@ -1,6 +1,6 @@
 package rockpaperscissors
 
-import "plateau/protocol"
+import "github.com/le-garff-yoann/plateau/protocol"
 
 const (
 	// ReqRock is the request that generates `MRock`.
